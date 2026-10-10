@@ -131,8 +131,9 @@ def production_url(project_id: str) -> str:
 
 
 def run(*args: str) -> None:
-    print("+", " ".join(a if not a.startswith("--token=") else "--token=***" for a in args))
-    subprocess.run(args, cwd=APP_DIR, check=True)  # noqa: S603
+    print("+", " ".join(args))
+    if subprocess.run(args, cwd=APP_DIR, check=False).returncode != 0:  # noqa: S603
+        sys.exit(f"command failed: {args[3]}")
 
 
 def deploy() -> None:
@@ -152,18 +153,17 @@ def deploy() -> None:
         (link / "project.json").write_text(
             json.dumps({"orgId": team_id(), "projectId": project["id"]})
         )
-        token = f"--token={_env('VERCEL_TOKEN')}"
-        npx = ["npx", "--yes", CLI]
-        run(*npx, "pull", "--yes", "--environment=production", token)
-        run(*npx, "build", "--prod", token)
+        # Vercel builds the uploaded source on Linux from uv.lock (.vercelignore applies).
+        # The CLI reads VERCEL_TOKEN from the environment; it never goes on the command line.
         run(
-            *npx,
+            "npx",
+            "--yes",
+            CLI,
             "deploy",
-            "--prebuilt",
             "--prod",
+            "--yes",
             f"--meta=gitSha={git_sha}",
             f"--env=GIT_SHA={git_sha}",
-            token,
         )
     url = production_url(project["id"])
     print(f"live: {url}")
