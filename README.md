@@ -6,19 +6,17 @@ Answers natural-language questions about 52 recipes from the
 
 | | |
 |---|---|
-| UI | https://recipe-qa.onrender.com |
-| API | `POST https://recipe-qa.onrender.com/ask` · OpenAPI: `/docs` · health: `/healthz` |
+| UI | https://recipe-qa.vercel.app |
+| API | `POST https://recipe-qa.vercel.app/ask` · OpenAPI: `/docs` · health: `/healthz` |
 | Container status / logs | `GET /ops/status`, `GET /ops/logs` with `Authorization: Bearer <OPS_TOKEN>` (token sent with the submission) |
 | Spec · ADRs · Evals | [SPEC.md](SPEC.md) · [docs/adr](docs/adr) · [evals](evals) |
 | AI usage notes | [docs/ai-usage.md](docs/ai-usage.md), [CLAUDE.md](CLAUDE.md) |
 
-> **Free hosting:** the instance sleeps after 15 minutes without traffic. The first
-> request after that takes ~30–60 s. Open `/healthz` once before testing.
 > The Gemini key is on the free tier (~20 model calls per model per day, 4 models in the
 > fallback chain); after that the API returns `503 upstream_unavailable` until 07:00 UTC.
 
 ```bash
-curl -s https://recipe-qa.onrender.com/ask -H 'content-type: application/json' \
+curl -s https://recipe-qa.vercel.app/ask -H 'content-type: application/json' \
   -d '{"question": "What is a vegetarian dinner I can make in under 30 minutes?"}' | jq
 ```
 
@@ -50,7 +48,8 @@ backend/            FastAPI service (Python 3.12, uv)
   tests/            unit + API contract tests (no network)
 frontend/           one-page UI, TypeScript + Vite, served by the backend
 evals/              golden set, eval harness, retrieval ablation, response JSON Schema
-deploy/render.py    deployment as code (Render API)
+deploy/vercel.py    deployment as code (Vercel API + CLI)
+backend/index.py    Vercel entrypoint; backend/vercel.json function config
 docs/adr/           architecture decision records
 ```
 
@@ -91,7 +90,7 @@ overlapping dishes (2 carbonaras, 3 marinara sauces, 2 guacamoles, 2 rice puddin
   JSON Schema and invariants I1–I7, prints a report, writes JSON to `evals/reports/`, and
   exits non-zero below the SPEC AC2 thresholds.
 - `evals/retrieval_eval.py` — retrieval-only ablation (BM25 / embeddings / hybrid).
-- `backend/tests` — 110 tests without network: wikitext parsing, time parsing, ingestion
+- `backend/tests` — 127 tests without network: wikitext parsing, time parsing, ingestion
   (mocked MediaWiki), constraints, lexicon, filters, BM25/RRF/hybrid and its degradation,
   prompt building, model fallback, API contract and invariants, rate limit, budget, cache,
   ops endpoints.
@@ -103,39 +102,48 @@ the 20 free daily calls of a model.
 
 ## Deployment
 
-**Where:** one Render free web service (Docker, Frankfurt). **Why:** the owner's
-constraint is free with no payment card; Render was the option that builds our Dockerfile
-from a private repo and has an API for scripted deploys. Hugging Face Spaces was tried
-first and rejected (Docker Spaces now need PRO); Cloud Run, Fly.io, Koyeb need a card.
-Full comparison: [ADR-0003](docs/adr/0003-deployment.md).
+**Where:** Vercel Hobby — the FastAPI app runs as one Vercel Function (Python 3.12) at
+https://recipe-qa.vercel.app. **Why:** the owner's constraint is free with no payment card,
+not even a verification hold. Hugging Face Spaces (`402`, Docker Spaces need PRO) and
+Render (`402`, card required for this account) were tried and failed at service creation;
+Cloud Run, Fly.io and Koyeb need a card; Back4app's free URL expires after 60 minutes.
+Full comparison and trade-offs: [ADR-0003](docs/adr/0003-deployment.md).
 
 **How a new deployment works:** push to `main` → GitHub Actions `ci`:
 lint + mypy + tests, UI build, gitleaks secret scan, Docker build + container smoke test
 (non-root, healthz, UI, 422, safety refusal with a dummy key) → job `deploy` (environment
-`production`) runs `deploy/render.py deploy`: creates the Render service if it does not
-exist, otherwise reconciles its settings and env vars with the code, triggers a deploy of
-the exact commit SHA unless it is already live, waits for `live`, then
-`deploy/render.py verify` smoke-tests the public URL. Re-running is a no-op for the same
-commit; deploys never run in parallel.
+`production`) runs `deploy/vercel.py deploy`: creates the Vercel project if it does not
+exist, upserts its env vars, skips if this commit is already the live production
+deployment, otherwise uploads the checkout and deploys it to production (Vercel builds it
+on Linux from `uv.lock`); then `deploy/vercel.py verify` smoke-tests the public URL
+(version = commit SHA, UI, 422, safety refusal, ops auth, embeddings loaded). The repo is
+not connected to Vercel, so only CI-tested commits go live; deploys never run in parallel;
+re-running is a no-op.
 
-**Secrets** (`GOOGLE_API_KEY`, `RENDER_API_KEY`, `OPS_TOKEN`) are GitHub environment
-secrets, copied to Render env vars by the deploy script. Nothing secret is in the repo or
-the image (gitleaks runs on every push; `.env` is git-ignored).
+**Docker:** `Dockerfile` (base images pinned by digest, `uv.lock`, `package-lock.json`,
+non-root) is the reproducible build for local runs and CI. The hosted function is built by
+Vercel from the same lock files, not from the image.
 
-**One-time bootstrap** (already done): sign up to Render with GitHub, allow the Render
-GitHub app on this repository, create a Render API key, set the three secrets.
+**Secrets** (`GOOGLE_API_KEY`, `VERCEL_TOKEN`, `OPS_TOKEN`) are GitHub environment secrets;
+the deploy script writes the app's secrets to Vercel as `sensitive` env vars and passes the
+token to the CLI only through the environment. Nothing secret is in the repo or the image
+(gitleaks on every push; `.env` is git-ignored).
 
-**Container-level access (chosen option: logs and container status):** the free Render
-workspace cannot invite members, so the container exposes, behind a bearer token:
+**One-time bootstrap** (done): a Vercel Hobby account, an access token for the team, the
+three secrets in the GitHub `production` environment.
+
+**Container-level access (chosen option: logs and runtime status):** Vercel Hobby has no
+team seats, so the service exposes, behind a bearer token:
 
 ```bash
-curl -s -H "Authorization: Bearer $OPS_TOKEN" https://recipe-qa.onrender.com/ops/status | jq
-curl -s -H "Authorization: Bearer $OPS_TOKEN" "https://recipe-qa.onrender.com/ops/logs?limit=50" | jq
+curl -s -H "Authorization: Bearer $OPS_TOKEN" https://recipe-qa.vercel.app/ops/status | jq
+curl -s -H "Authorization: Bearer $OPS_TOKEN" "https://recipe-qa.vercel.app/ops/logs?limit=50" | jq
 ```
 
 `status` shows the deployed git SHA, instance id, uptime, memory, CPU time, embedding
 state, model cooldowns, daily LLM budget and cache size; `logs` returns the last 2,000
-JSON log lines of the container. Build and deploy logs are in each Actions run.
+JSON log lines of the instance that serves the request. Build and deploy logs of every
+release are in its Actions run.
 
 ## Cost & latency
 
@@ -161,7 +169,7 @@ or when the key moves to a paid tier and +$1.1 per 1,000 questions buys measurab
 answers. Re-run `make eval` for every candidate before switching.
 
 **Current bottleneck:** availability, not speed — the free Gemini quota (≈ 80 model calls
-per day across the chain) and the free instance's cold start. On latency, the LLM call is
+per day across the chain). On latency, the LLM call is
 ~80% of a request; the query embedding is the next ~20%.
 
 **Next optimizations:** (1) a paid key or Vertex AI quota — removes the hard daily limit;
@@ -173,7 +181,7 @@ questions; the ablation shows BM25 alone gets 17/18); (3) stream the answer to t
 
 Every `/ask` writes one JSON log line (`event: "ask"`) with the `request_id` that the
 client also receives (body and `X-Request-ID` header, shown in the UI). Given a bad answer,
-take its request id and read that line (`/ops/logs`, or the platform log stream): it holds
+take its request id and read that line (`/ops/logs`, or the Vercel runtime logs): it holds
 the question, the parsed constraints and allergy groups, the pre-check result, the number
 of candidates after filtering, the retrieved recipe ids with their BM25 and vector ranks,
 whether retrieval was degraded, the model that answered, its raw decision and recipe ids,
@@ -187,7 +195,7 @@ log size), sampled and stored with a short retention.
 
 ## Production readiness
 
-Done: spec-first contract with machine-checked invariants; eval harness; 110 offline
+Done: spec-first contract with machine-checked invariants; eval harness; 127 offline
 tests; strict typing and linting; pinned, non-root, read-only-compatible Docker image;
 CI with secret scanning and container smoke tests; deploy of tested commits only,
 idempotent and serialized; secrets only in the environment; structured logs with request
@@ -198,14 +206,14 @@ nosniff); graceful degradation (BM25 fallback, model fallback chain, retries).
 
 | Gap | Close it by |
 |---|---|
-| Free LLM quota (~80 calls/day) and free instance cold starts | Paid Gemini tier or Vertex AI; paid instance or Cloud Run with min instances |
-| In-memory rate limit, budget, cache, logs (single instance) | Redis for limits/cache; Render log stream to a log store with retention |
-| Client IP for rate limiting trusts one proxy hop (`TRUSTED_PROXY_HOPS=1`) | Verify Render's proxy chain from `xff_entries` in logs; use the platform's client-IP header |
+| Free LLM quota (~80 calls/day) | Paid Gemini tier or Vertex AI |
+| Rate limit, budget, cache, log buffer are per function instance | Redis (e.g. Upstash) for limits/cache; a log drain or OpenTelemetry backend with retention |
+| Reviewers cannot see the platform dashboard (Hobby has no seats) | Vercel Pro, or Cloud Run with IAM viewer roles |
 | No metrics/alerts (only logs) | OpenTelemetry traces + metrics (latency per stage, refusal rate by reason, fallback rate); alert on 5xx and quota exhaustion |
 | Golden set is small (15) and English-only | Grow to 100+ from production questions; LLM-as-judge for groundedness of the answer text |
 | Answer text groundedness is checked only indirectly (citations, phrases) | Add a claim-level check (each quantity/step present in the cited recipe) in evals |
-| Render builds the image itself (not the CI-tested artifact) | Push the CI image to a registry and deploy it by digest |
-| No staging environment | Second Render service from a `staging` branch; promote by SHA |
+| Hosted runtime is not the CI-tested Docker image | Container host (Cloud Run) deploying the CI image by digest |
+| No staging environment | Vercel preview deployment per PR + smoke tests; promote by SHA |
 | No auth on `/ask` (public demo) | API keys or OAuth in front, per-key quotas |
 
 ## Scope cut on purpose
