@@ -140,7 +140,7 @@ question ─► validate ─► parse constraints ─► safety pre-check ─►
 |---|---|---|
 | Max time | "under 30 minutes", "in less than an hour", "within 45 min", "quick" is **not** a constraint | Keep recipes with known `total_minutes ≤ N`. Recipes with unknown time are **dropped** (we cannot prove they fit). |
 | Diet | "vegetarian", "meatless", "vegan", "plant-based" | Keep recipes whose `diet` satisfies it: vegan ⊂ vegetarian. Unknown diet is dropped. |
-| Excluded ingredient | "without X", "no X", "X-free" | Drop recipes whose ingredient lines contain X (word match, simple plural). An allergen group name ("nuts", "dairy", "eggs") drops every line of that group's lexicon; an allergen food ("cheese", "cream") drops that food. An allergen exclusion also switches on allergy mode (§5.4). "Is the pesto nut-free?" is a question about a dish, not a filter: allergy mode only. |
+| Excluded ingredient | "without X", "no X", "X-free" | Drop recipes whose ingredient lines contain X (word match, simple plural). An allergen group name ("nuts", "dairy", "eggs") drops every line of that group's lexicon; an allergen food ("cheese", "cream") drops that food. An allergen exclusion also switches on allergy mode (§5.4). "Is the pesto nut-free?" is a question about a dish, not a filter: allergy mode only. A recipe with an ingredient line that is another recipe ("1 recipe Flaky Pie Crust") fails every exclusion. |
 
 `total_minutes` comes from the recipe's `time` field in the Wikibooks `Recipe summary`
 template. For a range ("30–60 minutes") the **upper** bound is used; parts are summed

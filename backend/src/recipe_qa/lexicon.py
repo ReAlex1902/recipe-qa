@@ -241,7 +241,7 @@ def matching_lines(
 def diet_from(categories: Iterable[str], ingredients: list[str]) -> Diet | None:
     """Diet tag from Wikibooks categories, guarded by the ingredient lexicon."""
     cats = set(categories)
-    if matching_lines(ingredients, MEAT_FISH) or any(_SUB_RECIPE.search(i) for i in ingredients):
+    if matching_lines(ingredients, MEAT_FISH) or has_sub_recipe(ingredients):
         return None
     if "Vegan recipes" in cats and not matching_lines(
         ingredients, ANIMAL_PRODUCTS, ignore_plant_phrases=True
@@ -250,6 +250,10 @@ def diet_from(categories: Iterable[str], ingredients: list[str]) -> Diet | None:
     if cats & {"Vegan recipes", "Vegetarian recipes"}:
         return "vegetarian"
     return None
+
+
+def has_sub_recipe(ingredients: Iterable[str]) -> bool:
+    return any(_SUB_RECIPE.search(i) for i in ingredients)
 
 
 def exclusion_terms(word: str) -> tuple[tuple[str, ...], bool]:
