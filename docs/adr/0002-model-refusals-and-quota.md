@@ -38,7 +38,14 @@ prices per 1M tokens: 2.5-flash-lite $0.10 in / $0.40 out, 3.1-flash-lite $0.25 
 model (safety pre-check, empty filter result) and cache hits cost $0; the query embedding
 adds ~$0.000002.
 
-What the failures were:
+**Production run after all fixes** (2026-10-10 12:03 UTC, `https://recipe-qa.vercel.app`,
+commit `9efa4a6`): **15/15 golden, 4/4 contract, `refused` 15/15**; end-to-end latency
+from the client p50 1.6 s / p95 2.9 s; refusals without a model call 0.24 s. The primary
+model's daily free quota was already used, so every answer came from the first fallback,
+gemini-3.5-flash-lite (≈ $1.44 / 1,000 at its list price) — the fallback chain working as
+designed.
+
+What the failures in the per-model runs were:
 - 2.5-flash-lite: one free-tier quota error (HTTP 503 to the client) and one allergy answer
   that repeated a wrong claim from the Pesto recipe's notes ("necessary for people with nut
   allergies"). The second led to the allergy-mode change below; that run predates it.

@@ -95,7 +95,9 @@ overlapping dishes (2 carbonaras, 3 marinara sauces, 2 guacamoles, 2 rice puddin
   prompt building, model fallback, API contract and invariants, rate limit, budget, cache,
   ops endpoints.
 
-Latest golden-set runs, one per model (2026-10-10): see the table in
+**Latest production run (2026-10-10, commit `9efa4a6`): 15/15 golden cases, 4/4 contract
+cases, p50 1.6 s / p95 2.9 s end to end** (served by the fallback model; the primary's
+free quota was used up). Per-model runs: see the table in
 [ADR-0002](docs/adr/0002-model-refusals-and-quota.md#measurements). Evals run on demand
 (GitHub Actions → `eval` → Run workflow), not on every push, because one run uses ~13 of
 the 20 free daily calls of a model.
