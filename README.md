@@ -20,6 +20,32 @@ curl -s https://recipe-qa.vercel.app/ask -H 'content-type: application/json' \
   -d '{"question": "What is a vegetarian dinner I can make in under 30 minutes?"}' | jq
 ```
 
+## For reviewers
+
+1. Open the UI: https://recipe-qa.vercel.app (or call the API, example above).
+2. Read in this order: [SPEC.md](SPEC.md), [docs/adr](docs/adr), [evals](evals), then the
+   sections below. Deploy history and build logs: the repository's Actions tab.
+3. Logs and runtime status of the running service (the token is sent with the submission,
+   it is not in the repository):
+
+```bash
+export OPS_TOKEN=...   # from the submission e-mail
+
+# deployed git SHA, instance, uptime, memory, CPU, embeddings, model cooldowns, LLM budget
+curl -s -H "Authorization: Bearer $OPS_TOKEN" https://recipe-qa.vercel.app/ops/status
+
+# last log lines: one JSON line per request (question, filters, retrieved recipes, model,
+# tokens, per-stage timings), find a request by the id shown in the UI
+curl -s -H "Authorization: Bearer $OPS_TOKEN" "https://recipe-qa.vercel.app/ops/logs?limit=50"
+```
+
+The token is read-only: it opens only these two GET endpoints, and logs contain no
+secrets. Without it both return 401. Logs live in the memory of the function instance
+that serves the request, so after a cold start the list can be short.
+
+4. Run the golden set yourself: `make eval BASE_URL=https://recipe-qa.vercel.app`
+   (uses ~13 model calls of the free daily quota; see the note above).
+
 ## How it works
 
 ```
