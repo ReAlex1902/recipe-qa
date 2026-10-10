@@ -158,3 +158,19 @@ def test_document_embeddings_are_retried_after_cooldown(small_corpus: list[Recip
     assert embedder.doc_calls == 2
     assert not result.degraded
     assert retriever.has_embeddings
+
+
+def test_precomputed_document_vectors_skip_the_embedding_call(
+    small_corpus: list[Recipe],
+) -> None:
+    embedder = FakeEmbedder()
+    vectors = FakeEmbedder().embed_documents([r.as_prompt_text() for r in small_corpus])
+    retriever = HybridRetriever(small_corpus, embedder, doc_vectors=vectors)
+    assert retriever.has_embeddings
+    assert embedder.calls == 0
+    assert retriever.retrieve("dessert", Constraints()).hits[0].recipe.id == "tiramisu"
+
+
+def test_precomputed_vectors_must_match_corpus_size(small_corpus: list[Recipe]) -> None:
+    with pytest.raises(ValueError):
+        HybridRetriever(small_corpus, FakeEmbedder(), doc_vectors=np.zeros((2, 5)))
