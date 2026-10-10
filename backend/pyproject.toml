@@ -41,7 +41,8 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "S", "SIM", "RUF"]
-ignore = ["S101"]
+# RUF001: en dashes in time ranges are real Wikibooks data, not typos.
+ignore = ["S101", "RUF001"]
 
 [tool.mypy]
 strict = true

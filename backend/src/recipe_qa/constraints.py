@@ -1,0 +1,167 @@
+"""Deterministic question analysis: hard constraints, allergy mode, safety pre-check.
+
+No LLM is used here on purpose: these decisions must be predictable, testable and free
+(SPEC 4, 5.1, 5.4). Anything the patterns miss falls back to the model's own judgement
+(soft ranking via retrieval, `safety` decision in the prompt).
+"""
+
+import re
+
+from recipe_qa.lexicon import ALLERGEN_QUESTION_WORDS, contains_any
+from recipe_qa.models import Constraints, Diet
+
+_WORD_NUMBERS = {"a": 1, "an": 1, "one": 1, "two": 2, "three": 3, "four": 4, "five": 5}
+_BOUND = (
+    r"(?:under|below|less than|fewer than|within|at most|no more than|not more than|up to|"
+    r"max(?:imum)?(?: of)?|in(?: under| less than)?|takes?)"
+)
+_DUR = (
+    r"(?P<half_an>half an? )?(?P<num>\d+(?:\.\d+)?|an?|one|two|three|four|five)?\s*"
+    r"(?P<unit>hours?|hrs?|minutes?|mins?)\b(?P<and_half>\s+and\s+a\s+half)?"
+)
+_TIME_RES = (
+    re.compile(rf"\b{_BOUND}\s+{_DUR}", re.IGNORECASE),
+    re.compile(rf"\b{_DUR}\s+or\s+(?:less|under|fewer)\b", re.IGNORECASE),
+)
+
+_VEGAN_RE = re.compile(r"\b(?:vegan|plant[- ]based)\b", re.IGNORECASE)
+_VEGETARIAN_RE = re.compile(
+    r"(?<!non-)(?<!non )\b(?:vegetarian|veggie|meatless|meat[- ]free)\b", re.IGNORECASE
+)
+
+_EXCLUDE_RES = (
+    re.compile(r"\b(?:without|no)\s+([a-z]+)", re.IGNORECASE),
+    re.compile(r"\b([a-z]+)[- ]free\b", re.IGNORECASE),
+)
+# Words after "no"/"without" or before "-free" that are not ingredients.
+_NOT_INGREDIENTS = frozenset(
+    {
+        "more",
+        "longer",
+        "less",
+        "time",
+        "cooking",
+        "oven",
+        "stove",
+        "meat",
+        "fuss",
+        "added",
+        "fat",
+        "the",
+        "a",
+        "an",
+        "any",
+        "cook",
+        "baking",
+        "hassle",
+        "frills",
+        "allergy",
+        "allergen",
+        "allergens",
+        "risk",
+        "problem",
+        "need",
+    }
+)
+
+_ALLERGY_WORDS_RE = re.compile(
+    r"\b(?:allerg\w*|intoleran\w*|celiac|coeliac|anaphyla\w*)\b", re.IGNORECASE
+)
+
+_SAFETY_RES = (
+    # Medical situations: symptoms or a reaction happening now.
+    re.compile(
+        r"\b(?:allergic reaction|anaphyla\w*|epi-?pen|hives|can'?t breathe|"
+        r"(?:throat|lips?|tongue|face)\s+(?:is |are )?(?:swelling|swollen|closing|tingling)|"
+        r"food poisoning|poisoned|vomiting|overdose)\b",
+        re.IGNORECASE,
+    ),
+    # Dangerous food handling.
+    re.compile(
+        r"\braw\s+(?:chicken|poultry|pork|kidney beans?)\b|\bpoison\w*\b|"
+        r"\bspoiled\s+(?:meat|chicken|fish)\b|\b(?:moldy|mouldy)\b",
+        re.IGNORECASE,
+    ),
+)
+
+
+def _minutes(m: re.Match[str]) -> int:
+    if m.group("half_an"):
+        return 30
+    raw = (m.group("num") or "1").lower()
+    value = float(_WORD_NUMBERS[raw]) if raw in _WORD_NUMBERS else float(raw)
+    if m.group("unit").lower().startswith("h"):
+        value *= 60
+        if m.group("and_half"):
+            value += 30
+    return round(value)
+
+
+def _singular(word: str) -> str:
+    if word.endswith("ies"):
+        return word[:-3] + "y"
+    if word.endswith("oes"):
+        return word[:-2]
+    if word.endswith("s") and not word.endswith("ss"):
+        return word[:-1]
+    return word
+
+
+def _is_allergen_word(word: str) -> bool:
+    return any(contains_any(word, terms) for terms in ALLERGEN_QUESTION_WORDS.values())
+
+
+def parse_max_minutes(question: str) -> int | None:
+    found = [_minutes(m) for regex in _TIME_RES for m in regex.finditer(question)]
+    return min(found) if found else None
+
+
+def parse_diet(question: str) -> Diet | None:
+    if _VEGAN_RE.search(question):
+        return "vegan"
+    if _VEGETARIAN_RE.search(question):
+        return "vegetarian"
+    return None
+
+
+def parse_excluded(question: str) -> list[str]:
+    found: list[str] = []
+    for regex in _EXCLUDE_RES:
+        for m in regex.finditer(question):
+            word = m.group(1).lower()
+            if word in _NOT_INGREDIENTS or _is_allergen_word(word):
+                continue
+            found.append(_singular(word))
+    # Keep order of appearance in the question.
+    return sorted(dict.fromkeys(found), key=lambda w: question.lower().find(w))
+
+
+def parse_constraints(question: str) -> Constraints:
+    return Constraints(
+        max_total_minutes=parse_max_minutes(question),
+        diet=parse_diet(question),
+        exclude_ingredients=parse_excluded(question),
+    )
+
+
+def is_allergy_question(question: str) -> bool:
+    if _ALLERGY_WORDS_RE.search(question):
+        return True
+    for regex in _EXCLUDE_RES:
+        if any(_is_allergen_word(m.group(1)) for m in regex.finditer(question)):
+            return True
+    return False
+
+
+def allergens_in_question(question: str) -> list[str]:
+    """Allergen groups named in an allergy question, in lexicon order (SPEC 5.4)."""
+    if not is_allergy_question(question):
+        return []
+    return [
+        group for group, words in ALLERGEN_QUESTION_WORDS.items() if contains_any(question, words)
+    ]
+
+
+def safety_precheck(question: str) -> bool:
+    """True if the question must be refused with `safety` before retrieval."""
+    return any(regex.search(question) for regex in _SAFETY_RES)
