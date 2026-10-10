@@ -259,3 +259,21 @@ def test_usage_headers(corpus: list[Recipe]) -> None:
     assert resp.headers["x-llm-model"] == "fake-model"
     assert resp.headers["x-llm-input-tokens"] == "100"
     assert resp.headers["x-llm-output-tokens"] == "20"
+
+
+def test_repeated_question_is_served_from_cache(corpus: list[Recipe]) -> None:
+    gen = ScriptedGenerator()
+    client = _client(corpus, gen)
+    first = _ask(client, "How do I make carbonara?")
+    second = _ask(client, "  how do I make CARBONARA? ")
+    assert len(gen.calls) == 1
+    assert first["request_id"] != second["request_id"]
+    assert {**first, "request_id": ""} == {**second, "request_id": ""}
+
+
+def test_failures_are_not_cached(corpus: list[Recipe]) -> None:
+    gen = ScriptedGenerator(fail=True)
+    client = _client(corpus, gen)
+    client.post("/ask", json={"question": "carbonara"})
+    client.post("/ask", json={"question": "carbonara"})
+    assert len(gen.calls) == 2
