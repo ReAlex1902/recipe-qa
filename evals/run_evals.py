@@ -26,7 +26,8 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 EVALS = ROOT / "evals"
 SCHEMA = json.loads((EVALS / "response.schema.json").read_text())
-CORPUS = {r["id"]: r for r in json.loads((ROOT / "backend/data/corpus.json").read_text())["recipes"]}
+_CORPUS_FILE = ROOT / "backend" / "data" / "corpus.json"
+CORPUS = {r["id"]: r for r in json.loads(_CORPUS_FILE.read_text())["recipes"]}
 
 PASS_RATE_TARGET = 0.90  # AC2
 DIET_OK = {"vegetarian": {"vegetarian", "vegan"}, "vegan": {"vegan"}}
@@ -84,11 +85,13 @@ def check_expectations(body: dict[str, Any], expect: dict[str, Any]) -> list[str
     answer = (body["answer"] or "").lower()
 
     if body["refused"] != expect["refused"]:
-        errors.append(f"refused={body['refused']} ({body['refusal_reason']}), "
-                      f"expected {expect['refused']}")
+        errors.append(
+            f"refused={body['refused']} ({body['refusal_reason']}), expected {expect['refused']}"
+        )
     if "refusal_reason" in expect and body["refusal_reason"] != expect["refusal_reason"]:
-        errors.append(f"refusal_reason={body['refusal_reason']}, "
-                      f"expected {expect['refusal_reason']}")
+        errors.append(
+            f"refusal_reason={body['refusal_reason']}, expected {expect['refusal_reason']}"
+        )
     if "cite_any" in expect and not set(cited) & set(expect["cite_any"]):
         errors.append(f"cited {cited}, expected any of {expect['cite_any']}")
     if "cite_all" in expect:
@@ -117,12 +120,14 @@ def check_expectations(body: dict[str, Any], expect: dict[str, Any]) -> list[str
     if "allergy_groups" in expect:
         check = body["allergy_check"] or {}
         if check.get("allergens") != expect["allergy_groups"]:
-            errors.append(f"allergens={check.get('allergens')}, "
-                          f"expected {expect['allergy_groups']}")
+            errors.append(
+                f"allergens={check.get('allergens')}, expected {expect['allergy_groups']}"
+            )
         matched = {m["recipe_id"] for m in check.get("matches", [])}
         if "allergy_match_any" in expect and not matched & set(expect["allergy_match_any"]):
-            errors.append(f"allergy matches {sorted(matched)}, "
-                          f"expected any of {expect['allergy_match_any']}")
+            errors.append(
+                f"allergy matches {sorted(matched)}, expected any of {expect['allergy_match_any']}"
+            )
         if not body["safety_notice"]:
             errors.append("allergy question without safety_notice")
     for phrase in expect.get("forbid_phrases", []):
@@ -164,8 +169,12 @@ def run_contract(client: httpx.Client, case: dict[str, Any]) -> CaseResult:
         body["question"] = "x" * 501
     start = time.perf_counter()
     resp = client.post("/ask", json=body)
-    result = CaseResult(id=case["id"], kind="contract", passed=False,
-                        latency_ms=(time.perf_counter() - start) * 1000)
+    result = CaseResult(
+        id=case["id"],
+        kind="contract",
+        passed=False,
+        latency_ms=(time.perf_counter() - start) * 1000,
+    )
     if resp.status_code != case["status"]:
         result.failures.append(f"HTTP {resp.status_code}, expected {case['status']}")
     else:
@@ -200,8 +209,12 @@ def main() -> int:
     parser.add_argument("--base-url", default="http://localhost:8000")
     parser.add_argument("--only", nargs="*", help="run only these case ids")
     parser.add_argument("--repeat", type=int, default=1, help="run the golden set N times")
-    parser.add_argument("--delay", type=float, default=6.5,
-                        help="seconds between requests (service limit: 10/min per IP)")
+    parser.add_argument(
+        "--delay",
+        type=float,
+        default=6.5,
+        help="seconds between requests (service limit: 10/min per IP)",
+    )
     parser.add_argument("--report", type=Path, default=EVALS / "reports")
     args = parser.parse_args()
 
@@ -215,8 +228,10 @@ def main() -> int:
                 r = run_case(client, case)
                 results.append(r)
                 mark = "PASS" if r.passed else "FAIL"
-                print(f"[{n + 1}] {mark} {r.id:28} {r.latency_ms:7.0f} ms  "
-                      f"{'refused:' + str(r.refusal_reason) if r.refused else r.cited}")
+                print(
+                    f"[{n + 1}] {mark} {r.id:28} {r.latency_ms:7.0f} ms  "
+                    f"{'refused:' + str(r.refusal_reason) if r.refused else r.cited}"
+                )
                 for f in r.failures:
                     print(f"        - {f}")
                 time.sleep(args.delay)
@@ -246,30 +261,38 @@ def main() -> int:
         "golden_pass_rate": round(pass_rate, 3),
         "refused_flag_correct_rate": round(refusal_rate, 3),
         "contract_passed": f"{sum(r.passed for r in contract)}/{len(contract)}",
-        "latency_ms_llm": {"p50": round(statistics.median(llm)) if llm else None,
-                           "p95": round(percentile(llm, 0.95))},
-        "latency_ms_no_llm": {"p50": round(statistics.median(no_llm)) if no_llm else None,
-                              "p95": round(percentile(no_llm, 0.95))},
+        "latency_ms_llm": {
+            "p50": round(statistics.median(llm)) if llm else None,
+            "p95": round(percentile(llm, 0.95)),
+        },
+        "latency_ms_no_llm": {
+            "p50": round(statistics.median(no_llm)) if no_llm else None,
+            "p95": round(percentile(no_llm, 0.95)),
+        },
         "tokens_per_llm_call": {
             "input": round(sum(r.input_tokens for r in golden) / max(llm_calls, 1)),
             "output": round(sum(r.output_tokens for r in golden) / max(llm_calls, 1)),
         },
         "cost_usd_total": round(cost, 6) if cost is not None else None,
         "cost_usd_per_1000_questions": round(cost / len(golden) * 1000, 3)
-        if cost is not None and golden else None,
+        if cost is not None and golden
+        else None,
     }
     print(json.dumps(summary, indent=2))
 
     args.report.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     out = args.report / f"eval-{stamp}.json"
-    out.write_text(json.dumps(
-        {"summary": summary, "results": [r.__dict__ for r in results]}, indent=1,
-        ensure_ascii=False))
+    out.write_text(
+        json.dumps(
+            {"summary": summary, "results": [r.__dict__ for r in results]},
+            indent=1,
+            ensure_ascii=False,
+        )
+    )
     print(f"report: {out}")
 
-    ok = (pass_rate >= PASS_RATE_TARGET and refusal_rate == 1.0
-          and all(r.passed for r in contract))
+    ok = pass_rate >= PASS_RATE_TARGET and refusal_rate == 1.0 and all(r.passed for r in contract)
     return 0 if ok else 1
 
 

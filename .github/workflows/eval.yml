@@ -1,0 +1,31 @@
+# The golden set calls the LLM ~13 times. Free-tier quotas are small per model per day,
+# so this runs on demand (and after prompt/model/retrieval changes), not on every push.
+name: eval
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Service URL (default: production)"
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  golden-set:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+        with:
+          version: "0.11.3"
+      - run: uv sync --frozen --project backend
+      - run: uv run --project backend python evals/run_evals.py --base-url "${BASE_URL}"
+        env:
+          BASE_URL: ${{ inputs.base_url || vars.PUBLIC_URL }}
+      - if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: eval-report
+          path: evals/reports/

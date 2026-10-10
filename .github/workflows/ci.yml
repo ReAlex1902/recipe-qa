@@ -1,0 +1,119 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  backend:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+        with:
+          version: "0.11.3"
+      - run: uv sync --frozen
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run mypy
+      # Tests never call the network; a dummy key proves no real secret is needed.
+      - run: uv run pytest
+        env:
+          GOOGLE_API_KEY: dummy
+
+  frontend:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run build
+
+  secrets-scan:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  image:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          load: true
+          tags: recipe-qa:ci
+          build-args: GIT_SHA=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      # Container smoke test without a real key: startup must survive a failing
+      # embedding call (BM25 fallback), and the no-LLM paths must answer.
+      - name: smoke test container
+        run: |
+          docker run -d --name app -p 7860:7860 -e GOOGLE_API_KEY=dummy recipe-qa:ci
+          for i in $(seq 1 30); do curl -sf localhost:7860/healthz && break; sleep 2; done
+          curl -sf localhost:7860/healthz | grep -q '"corpus_size":52'
+          curl -sf localhost:7860/ | grep -q "Recipe Q&amp;A"
+          code=$(curl -s -o /dev/null -w '%{http_code}' localhost:7860/ask -H 'content-type: application/json' -d '{"question":""}')
+          test "$code" = 422
+          curl -sf localhost:7860/ask -H 'content-type: application/json' \
+            -d '{"question":"I ate peanuts and my throat is swelling"}' | grep -q '"refusal_reason":"safety"'
+          docker exec app id -u | grep -qx 1000
+      - if: always()
+        run: docker logs app || true
+
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [backend, frontend, secrets-scan, image]
+    runs-on: ubuntu-24.04
+    environment:
+      name: production
+      url: ${{ vars.PUBLIC_URL }}
+    # Never run two deploys at once; a newer push waits for the running one.
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+        with:
+          version: "0.11.3"
+      - name: deploy to Hugging Face Space
+        run: uv run --no-project --with huggingface_hub==2.2.0 python deploy/hf_space.py deploy
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_SPACE: ${{ vars.HF_SPACE }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          SOURCE_REPO_TOKEN: ${{ secrets.SOURCE_REPO_TOKEN }}
+          SOURCE_REPO: ${{ github.repository }}
+          GIT_SHA: ${{ github.sha }}
+      - name: wait for the new version and smoke test
+        run: uv run --no-project --with huggingface_hub==2.2.0 python deploy/hf_space.py verify
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_SPACE: ${{ vars.HF_SPACE }}
+          GIT_SHA: ${{ github.sha }}
