@@ -20,7 +20,7 @@ log = logging.getLogger(__name__)
 
 Decision = Literal["answer", "out_of_corpus", "out_of_domain", "safety"]
 RETRYABLE_STATUS = {429, 500, 502, 503, 504}
-MAX_ATTEMPTS = 3
+MAX_ATTEMPTS = 2  # one retry: each attempt spends free-tier quota
 EMBED_BATCH = 100
 
 SYSTEM_PROMPT = """\
@@ -132,9 +132,8 @@ def _retry[T](call: Callable[[], T], what: str, delay_s: float = 0.5) -> T:
                     }
                 },
             )
-            transient = status in RETRYABLE_STATUS - {429} or (
-                status is None and not isinstance(exc, UpstreamError)
-            )
+            # Network errors, timeouts, 5xx and malformed model output are worth one retry.
+            transient = status in RETRYABLE_STATUS - {429} or status is None
             if _is_quota_error(exc) or not transient or attempt == MAX_ATTEMPTS:
                 raise
         time.sleep(delay_s * 2 ** (attempt - 1))
@@ -173,7 +172,8 @@ class GeminiGenerator:
         try:
             out = ModelOutput.model_validate_json(resp.text or "")
         except ValidationError as exc:
-            raise UpstreamError(f"{model} returned invalid JSON") from exc
+            finish = resp.candidates[0].finish_reason if resp.candidates else None
+            raise UpstreamError(f"{model} returned invalid JSON (finish_reason={finish})") from exc
         usage = resp.usage_metadata
         return Generation(
             decision=out.decision,

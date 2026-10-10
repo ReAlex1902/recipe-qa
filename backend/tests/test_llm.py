@@ -33,7 +33,9 @@ class FakeModels:
         usage = SimpleNamespace(
             prompt_token_count=10, candidates_token_count=5, thoughts_token_count=None
         )
-        return SimpleNamespace(text=outcome, usage_metadata=usage, model_version=model)
+        return SimpleNamespace(
+            text=outcome, usage_metadata=usage, model_version=model, candidates=[]
+        )
 
 
 def _generator(behaviour: dict[str, Any]) -> tuple[GeminiGenerator, FakeModels]:
@@ -62,10 +64,11 @@ def test_all_models_exhausted_raises_upstream_error() -> None:
         gen.generate("q", [make_recipe("a")], Constraints(), allergy_mode=False)
 
 
-def test_invalid_json_raises_upstream_error() -> None:
-    gen, _ = _generator({"m1": "not json", "m2": "not json"})
+def test_invalid_json_is_retried_once_then_next_model() -> None:
+    gen, models = _generator({"m1": "not json", "m2": "not json"})
     with pytest.raises(UpstreamError):
         gen.generate("q", [make_recipe("a")], Constraints(), allergy_mode=False)
+    assert models.calls == ["m1", "m1", "m2", "m2"]
 
 
 def test_allergy_mode_prompt_omits_free_text_notes() -> None:

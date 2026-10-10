@@ -21,7 +21,7 @@ class Settings(BaseSettings):
         "gemini-2.5-flash-lite,gemini-3.1-flash-lite,gemini-3.5-flash-lite,gemini-2.5-flash"
     )
     llm_temperature: float = 0.0
-    llm_max_output_tokens: int = 1024
+    llm_max_output_tokens: int = 2048
     llm_timeout_s: float = 20.0
     embedding_model: str = "gemini-embedding-001"
     embedding_dim: int = 768
