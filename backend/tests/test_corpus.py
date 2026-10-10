@@ -43,3 +43,14 @@ def test_constraint_coverage() -> None:
         and r.total_minutes <= 30
     ]
     assert len(quick_veg) >= 3
+
+
+def test_committed_embeddings_match_the_corpus() -> None:
+    from recipe_qa.config import Settings
+    from recipe_qa.embeddings_file import load_vectors
+
+    s = Settings(google_api_key="unused")  # type: ignore[arg-type]
+    vectors = load_vectors(
+        CORPUS.with_name("embeddings"), _recipes(), model=s.embedding_model, dim=s.embedding_dim
+    )
+    assert vectors is not None, "corpus changed: run `make embed`"

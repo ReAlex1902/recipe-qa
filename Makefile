@@ -1,4 +1,4 @@
-.PHONY: test lint ingest ingest-pinned schema dev dev-api dev-ui eval docker
+.PHONY: test lint ingest ingest-pinned embed schema dev eval docker
 
 BASE_URL ?= http://localhost:8000
 
@@ -14,6 +14,9 @@ ingest:
 
 ingest-pinned:
 	cd backend && uv run python -m recipe_qa.ingest --pinned
+
+embed:
+	cd backend && uv run python -m recipe_qa.embeddings_file
 
 schema:
 	cd backend && uv run python -m recipe_qa.export_schema

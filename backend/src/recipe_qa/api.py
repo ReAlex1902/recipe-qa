@@ -23,6 +23,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.concurrency import run_in_threadpool
 
 from recipe_qa.config import Settings
+from recipe_qa.embeddings_file import load_vectors
 from recipe_qa.llm import GeminiEmbedder, GeminiGenerator, UpstreamError, make_client
 from recipe_qa.logging_setup import ring_buffer
 from recipe_qa.models import Recipe
@@ -60,7 +61,17 @@ def build_pipeline(settings: Settings) -> Pipeline:
         max_output_tokens=settings.llm_max_output_tokens,
     )
     return Pipeline(
-        retriever=HybridRetriever(recipes, embedder, top_k=settings.top_k),
+        retriever=HybridRetriever(
+            recipes,
+            embedder,
+            top_k=settings.top_k,
+            doc_vectors=load_vectors(
+                settings.corpus_path.with_name("embeddings"),
+                recipes,
+                model=settings.embedding_model,
+                dim=settings.embedding_dim,
+            ),
+        ),
         generator=generator,
         budget=DailyBudget(settings.daily_llm_budget),
         cache=ResponseCache(settings.cache_size, settings.cache_ttl_s),

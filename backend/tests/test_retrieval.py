@@ -1,6 +1,7 @@
 from collections.abc import Sequence
 
 import numpy as np
+import pytest
 
 from recipe_qa.filters import satisfies
 from recipe_qa.models import Constraints, Recipe

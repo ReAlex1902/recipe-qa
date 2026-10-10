@@ -123,6 +123,7 @@ class HybridRetriever:
         *,
         retry_after_s: float = 60.0,
         clock: Callable[[], float] = time.monotonic,
+        doc_vectors: np.ndarray | None = None,
     ) -> None:
         self._recipes = {r.id: r for r in recipes}
         self._order = [r.id for r in recipes]
@@ -134,6 +135,11 @@ class HybridRetriever:
         self._clock = clock
         self._next_attempt = 0.0
         self._lock = threading.Lock()
+        if doc_vectors is not None:
+            if doc_vectors.shape[0] != len(recipes):
+                raise ValueError("doc_vectors must have one row per recipe")
+            norms = np.linalg.norm(doc_vectors, axis=1, keepdims=True)
+            self._doc_vectors = doc_vectors / np.where(norms == 0, 1, norms)
         self._ensure_doc_vectors()
 
     def _ensure_doc_vectors(self) -> None:
