@@ -18,7 +18,7 @@ class Settings(BaseSettings):
 
     # Fallback chain, comma-separated, cheapest first (ADR-0002).
     llm_models: str = (
-        "gemini-2.5-flash-lite,gemini-3.1-flash-lite,gemini-3.5-flash-lite,gemini-2.5-flash"
+        "gemini-2.5-flash-lite,gemini-3.5-flash-lite,gemini-3.1-flash-lite,gemini-2.5-flash"
     )
     llm_temperature: float = 0.0
     llm_max_output_tokens: int = 2048

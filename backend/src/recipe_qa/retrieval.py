@@ -7,9 +7,11 @@ constraints. If the embedding provider fails, retrieval degrades to BM25 only an
 import logging
 import math
 import re
+import threading
+import time
 import unicodedata
 from collections import Counter
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import Protocol
 
@@ -113,25 +115,51 @@ class RetrievalResult:
 
 
 class HybridRetriever:
-    def __init__(self, recipes: Sequence[Recipe], embedder: Embedder, top_k: int = 5) -> None:
+    def __init__(
+        self,
+        recipes: Sequence[Recipe],
+        embedder: Embedder,
+        top_k: int = 5,
+        *,
+        retry_after_s: float = 60.0,
+        clock: Callable[[], float] = time.monotonic,
+    ) -> None:
         self._recipes = {r.id: r for r in recipes}
         self._order = [r.id for r in recipes]
         self._bm25 = BM25Index(recipes)
         self._embedder = embedder
         self._top_k = top_k
         self._doc_vectors: np.ndarray | None = None
-        try:
-            vectors = embedder.embed_documents([r.as_prompt_text() for r in recipes])
+        self._retry_after_s = retry_after_s
+        self._clock = clock
+        self._next_attempt = 0.0
+        self._lock = threading.Lock()
+        self._ensure_doc_vectors()
+
+    def _ensure_doc_vectors(self) -> None:
+        """Embed the corpus; on failure, try again after `retry_after_s` (quota, outage)."""
+        if self._doc_vectors is not None or self._clock() < self._next_attempt:
+            return
+        with self._lock:
+            if self._doc_vectors is not None:
+                return
+            try:
+                vectors = self._embedder.embed_documents(
+                    [self._recipes[i].as_prompt_text() for i in self._order]
+                )
+            except Exception:
+                self._next_attempt = self._clock() + self._retry_after_s
+                log.exception("document embedding failed; BM25 only until the next attempt")
+                return
             norms = np.linalg.norm(vectors, axis=1, keepdims=True)
             self._doc_vectors = vectors / np.where(norms == 0, 1, norms)
-        except Exception:
-            log.exception("document embedding failed; retrieval runs on BM25 only")
 
     @property
     def has_embeddings(self) -> bool:
         return self._doc_vectors is not None
 
     def _vector_ranking(self, query: str, allowed: list[str]) -> list[str] | None:
+        self._ensure_doc_vectors()
         if self._doc_vectors is None:
             return None
         try:
