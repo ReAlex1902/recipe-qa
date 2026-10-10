@@ -70,3 +70,11 @@ def test_ops_logs_returns_recent_json_lines(small_corpus: list[Recipe]) -> None:
     finally:
         logging.getLogger().removeHandler(handler)
     assert [e["msg"] for e in body["lines"]] == ["line 3", "line 4"]
+
+
+def test_ops_endpoints_are_rate_limited(small_corpus: list[Recipe]) -> None:
+    client = _client(small_corpus, TOKEN)
+    auth = {"Authorization": f"Bearer {TOKEN}"}
+    codes = [client.get("/ops/status", headers=auth).status_code for _ in range(31)]
+    assert codes[:30] == [200] * 30
+    assert codes[30] == 429
