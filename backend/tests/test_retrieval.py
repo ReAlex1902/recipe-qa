@@ -4,7 +4,13 @@ import numpy as np
 
 from recipe_qa.filters import satisfies
 from recipe_qa.models import Constraints, Recipe
-from recipe_qa.retrieval import BM25Index, HybridRetriever, reciprocal_rank_fusion, tokenize
+from recipe_qa.retrieval import (
+    BM25Index,
+    HybridRetriever,
+    reciprocal_rank_fusion,
+    same_dish_groups,
+    tokenize,
+)
 
 from .conftest import FakeEmbedder, make_recipe
 
@@ -98,3 +104,16 @@ def test_no_candidates_after_filter(small_corpus: list[Recipe]) -> None:
     result = retriever.retrieve("dessert", Constraints(max_total_minutes=5, diet="vegan"))
     assert result.hits == []
     assert result.candidates_after_filter == 0
+
+
+def test_same_dish_groups_by_distinctive_title_word() -> None:
+    recipes = [
+        make_recipe("a", title="Spaghetti alla Carbonara"),
+        make_recipe("b", title="Carbonara Pasta"),
+        make_recipe("c", title="Spaghetti alla Puttanesca"),
+        make_recipe("d", title="Kheer (Rice Pudding)"),
+        make_recipe("e", title="Italian Rice Pudding"),
+        make_recipe("f", title="Potato Curry (Aloo Masala)"),
+        make_recipe("g", title="Mango and Yellow Split Pea Curry"),
+    ]
+    assert same_dish_groups(recipes) == [["a", "b"], ["d", "e"]]
