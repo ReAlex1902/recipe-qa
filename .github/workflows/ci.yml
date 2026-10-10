@@ -92,28 +92,22 @@ jobs:
     runs-on: ubuntu-24.04
     environment:
       name: production
-      url: ${{ vars.PUBLIC_URL }}
+      url: ${{ steps.deploy.outputs.url }}
     # Never run two deploys at once; a newer push waits for the running one.
     concurrency:
       group: deploy-production
       cancel-in-progress: false
+    env:
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      OPS_TOKEN: ${{ secrets.OPS_TOKEN }}
+      GIT_SHA: ${{ github.sha }}
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.3.0
-        with:
-          version: "0.11.3"
-      - name: deploy to Hugging Face Space
-        run: uv run --no-project --with huggingface_hub==2.2.0 python deploy/hf_space.py deploy
+      - id: deploy
+        name: deploy this commit to Render
+        run: python3 deploy/render.py deploy
         env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
-          HF_SPACE: ${{ vars.HF_SPACE }}
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
-          SOURCE_REPO_TOKEN: ${{ secrets.SOURCE_REPO_TOKEN }}
-          SOURCE_REPO: ${{ github.repository }}
-          GIT_SHA: ${{ github.sha }}
-      - name: wait for the new version and smoke test
-        run: uv run --no-project --with huggingface_hub==2.2.0 python deploy/hf_space.py verify
-        env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
-          HF_SPACE: ${{ vars.HF_SPACE }}
-          GIT_SHA: ${{ github.sha }}
+          GITHUB_REPO: ${{ github.repository }}
+      - name: smoke test the live service
+        run: python3 deploy/render.py verify

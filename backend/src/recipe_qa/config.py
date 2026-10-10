@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from pydantic import SecretStr
+from pydantic import AliasChoices, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BACKEND_DIR = Path(__file__).resolve().parents[2]
@@ -43,7 +43,8 @@ class Settings(BaseSettings):
     ops_token: SecretStr | None = None
 
     log_level: str = "INFO"
-    git_sha: str = "dev"
+    # Render sets RENDER_GIT_COMMIT for every deploy; GIT_SHA is used by local/CI images.
+    git_sha: str = Field("dev", validation_alias=AliasChoices("RENDER_GIT_COMMIT", "GIT_SHA"))
 
     @property
     def llm_model_chain(self) -> list[str]:
