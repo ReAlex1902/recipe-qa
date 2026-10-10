@@ -117,3 +117,17 @@ def test_parse_recipe_intro_and_time() -> None:
     assert r.steps[1] == "Fry the guanciale until crisp."
     assert r.dish_categories == ["Pasta"]
     assert r.cuisines == ["Italian"]
+
+
+def test_parse_recipe_subsections_inherit_parent_section() -> None:
+    wiki = (
+        "{{recipesummary|category=Cookie recipes|time=About 2 hours}}\n"
+        "==Ingredients==\n===Waffles===\n*4 cups flour\n===Filling===\n*1 cup butter\n"
+        "==Procedure==\n=== Waffles ===\n#Mix well.\n=== Filling ===\n#Melt the butter.\n"
+        "==Notes==\nServe warm.\n"
+    )
+    r = parse_recipe(title="Cookbook:X", url="u", revision_id=1, wikitext=wiki, categories=[])
+    assert r.ingredients == ["4 cups flour", "1 cup butter"]
+    assert r.steps == ["Mix well.", "Melt the butter."]
+    assert r.notes == "Notes: Serve warm."
+    assert r.dish_categories == ["Cookie"]
