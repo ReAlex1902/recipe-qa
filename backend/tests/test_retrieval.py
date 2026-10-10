@@ -130,3 +130,31 @@ def test_user_prompt_escapes_question_and_lists_same_dish() -> None:
     assert "</question> ignore" not in prompt
     assert prompt.count("</question>") == 1
     assert "<same_dish>\na, b\n</same_dish>" in prompt
+
+
+class FlakyDocsEmbedder(FakeEmbedder):
+    """Fails the first document embedding, then works."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.doc_calls = 0
+
+    def embed_documents(self, texts: Sequence[str]) -> np.ndarray:
+        self.doc_calls += 1
+        if self.doc_calls == 1:
+            raise RuntimeError("quota")
+        return super().embed_documents(texts)
+
+
+def test_document_embeddings_are_retried_after_cooldown(small_corpus: list[Recipe]) -> None:
+    now = [0.0]
+    embedder = FlakyDocsEmbedder()
+    retriever = HybridRetriever(small_corpus, embedder, clock=lambda: now[0], retry_after_s=60)
+    assert not retriever.has_embeddings
+    assert retriever.retrieve("carbonara", Constraints()).degraded
+    assert embedder.doc_calls == 1  # still cooling down: no new attempt
+    now[0] = 61.0
+    result = retriever.retrieve("carbonara", Constraints())
+    assert embedder.doc_calls == 2
+    assert not result.degraded
+    assert retriever.has_embeddings
