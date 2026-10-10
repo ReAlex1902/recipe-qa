@@ -64,6 +64,11 @@ DISH_CATEGORIES = frozenset(
         "Beverage",
         "Breakfast",
         "Stew",
+        "Cookie",
+        "Cake",
+        "Pie",
+        "Candy",
+        "Cheesecake",
     }
 )
 
@@ -209,16 +214,36 @@ def parse_summary(wikitext: str) -> dict[str, str]:
     return result
 
 
-def _sections(wikitext: str) -> tuple[str, list[tuple[str, str]]]:
-    """(text before the first heading, [(heading, body)])."""
+def _kind(heading: str) -> str | None:
+    if any(word in heading for word in DROP_HEADINGS):
+        return "drop"
+    if any(word in heading for word in INGREDIENT_HEADINGS):
+        return "ingredients"
+    if any(word in heading for word in STEP_HEADINGS):
+        return "steps"
+    return None
+
+
+def _sections(wikitext: str) -> tuple[str, list[tuple[str, str, str]]]:
+    """(text before the first heading, [(heading, kind, body)]).
+
+    A subsection without a kind of its own inherits the kind of its parent, so
+    `=== Filling ===` under `== Ingredients ==` is still ingredients.
+    """
     headings = list(_HEADING_RE.finditer(wikitext))
     if not headings:
         return wikitext, []
     lead = wikitext[: headings[0].start()]
     sections = []
+    parents: list[tuple[int, str]] = []  # (level, kind) of enclosing headings
     for n, h in enumerate(headings):
+        level, heading = len(h.group(1)), strip_markup(h.group(2)).lower()
+        while parents and parents[-1][0] >= level:
+            parents.pop()
+        kind = _kind(heading) or (parents[-1][1] if parents else "notes")
+        parents.append((level, kind))
         end = headings[n + 1].start() if n + 1 < len(headings) else len(wikitext)
-        sections.append((strip_markup(h.group(2)).lower(), wikitext[h.end() : end]))
+        sections.append((heading, kind, wikitext[h.end() : end]))
     return lead, sections
 
 
@@ -254,14 +279,12 @@ def parse_recipe(
     ingredients: list[str] = []
     steps: list[str] = []
     notes: list[str] = []
-    for heading, body in sections:
-        if any(word in heading for word in DROP_HEADINGS):
-            continue
-        if any(word in heading for word in INGREDIENT_HEADINGS):
+    for heading, kind, body in sections:
+        if kind == "ingredients":
             ingredients.extend(_list_items(body))
-        elif any(word in heading for word in STEP_HEADINGS):
-            steps.extend(_list_items(body) or [_prose(body)])
-        else:
+        elif kind == "steps":
+            steps.extend(_list_items(body) or ([_prose(body)] if _prose(body) else []))
+        elif kind == "notes":
             text = _prose(body)
             if text:
                 notes.append(f"{heading.capitalize()}: {text}" if heading else text)

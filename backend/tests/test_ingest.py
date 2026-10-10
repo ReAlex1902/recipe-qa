@@ -5,8 +5,8 @@ from typing import Any
 import httpx
 import pytest
 
-from recipe_qa.ingest.mediawiki import MediaWikiClient, PageNotFoundError
 from recipe_qa.ingest.build import build_corpus
+from recipe_qa.ingest.mediawiki import MediaWikiClient, PageNotFoundError
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -35,10 +35,13 @@ def test_fetch_pages_merges_category_continuation() -> None:
         title = "Cookbook:Tarator"
         if "clcontinue" not in params:
             page = _page(title, 7, wiki, ["Soup recipes"])
-            return httpx.Response(200, json={
-                "continue": {"clcontinue": "1|x", "continue": "||"},
-                "query": {"pages": [page]},
-            })
+            return httpx.Response(
+                200,
+                json={
+                    "continue": {"clcontinue": "1|x", "continue": "||"},
+                    "query": {"pages": [page]},
+                },
+            )
         page = {"title": title, "categories": [{"title": "Category:Bulgarian recipes"}]}
         return httpx.Response(200, json={"query": {"pages": [page]}})
 
@@ -76,7 +79,7 @@ def test_build_corpus_is_sorted_and_deterministic(tmp_path: Path) -> None:
 
     def handler(request: httpx.Request) -> httpx.Response:
         titles = request.url.params["titles"].split("|")
-        pages = [_page(t, n, wiki, ["Italian recipes"]) for n, t in enumerate(titles)]
+        pages = [_page(t, len(t), wiki, ["Italian recipes"]) for t in titles]
         return httpx.Response(200, json={"query": {"pages": pages}})
 
     out = tmp_path / "corpus.json"
