@@ -45,12 +45,14 @@ def test_parse_diet(question: str, diet: str | None) -> None:
     ("question", "excluded"),
     [
         ("a soup without onions", ["onion"]),
-        # cream is an allergen word: handled by allergy mode, not a hard filter (SPEC 5.1)
-        ("pasta with no garlic and without cream", ["garlic"]),
+        ("pasta with no garlic and without cream", ["garlic", "cream"]),
         ("garlic-free sauce", ["garlic"]),
         ("a curry with chicken", []),
-        # allergen words go to allergy mode, not to the ingredient filter
-        ("a nut-free dessert", []),
+        # allergen words are a hard filter AND switch on allergy mode (review 2)
+        ("a nut-free dessert", ["nut"]),
+        ("a dessert without eggs", ["egg"]),
+        ("pasta without cheese", ["cheese"]),
+        ("soup with no cream", ["cream"]),
     ],
 )
 def test_parse_excluded_ingredients(question: str, excluded: list[str]) -> None:
@@ -138,3 +140,39 @@ def test_no_meat_means_vegetarian(question: str) -> None:
 )
 def test_non_ingredient_words_are_not_exclusions(question: str) -> None:
     assert parse_constraints(question).exclude_ingredients == []
+
+
+# Review 2 (2026-10-10)
+@pytest.mark.parametrize(
+    ("question", "minutes"),
+    [("a 30-minute vegetarian dinner", 30), ("a 1-hour soup", 60), ("ready in 45-minutes", 45)],
+)
+def test_hyphenated_durations(question: str, minutes: int) -> None:
+    assert parse_constraints(question).max_total_minutes == minutes
+
+
+@pytest.mark.parametrize(
+    "question", ["I am not vegetarian, what meat dish?", "not vegan please", "I'm not a vegetarian"]
+)
+def test_negated_diet_is_no_constraint(question: str) -> None:
+    assert parse_constraints(question).diet is None
+
+
+def test_with_an_allergen_food_is_not_an_allergy_question() -> None:
+    assert allergens_in_question("I want something with fish") == []
+
+
+def test_containment_question_on_allergen_food_is_allergy_mode() -> None:
+    assert allergens_in_question("Does the naan have any butter?") == ["dairy"]
+
+
+def test_more_non_ingredient_words() -> None:
+    assert parse_constraints("dinner without having to shop").exclude_ingredients == []
+
+
+def test_allergen_exclusion_also_enables_allergy_mode() -> None:
+    assert allergens_in_question("a dessert without eggs") == ["egg"]
+
+
+def test_sub_recipe_reference_makes_diet_unknown() -> None:
+    assert diet_from(["Vegan recipes"], ["1 recipe Flaky Pie Crust", "4 cups rhubarb"]) is None

@@ -51,6 +51,16 @@ def test_filters_time_diet_and_exclusions() -> None:
     assert not satisfies(make_recipe("g", ingredients=["2 red onions, sliced"]), no_onion)
     assert satisfies(make_recipe("h", ingredients=["garlic"]), no_onion)
     assert satisfies(make_recipe("i"), Constraints())
+    # an allergen group name excludes the whole group lexicon; a food excludes itself
+    no_nuts = Constraints(exclude_ingredients=["nut"])
+    assert not satisfies(make_recipe("j", ingredients=["50 g chopped walnuts"]), no_nuts)
+    assert not satisfies(make_recipe("k", ingredients=["pine nuts"]), no_nuts)
+    no_egg = Constraints(exclude_ingredients=["egg"])
+    assert not satisfies(make_recipe("l", ingredients=["4 yolks"]), no_egg)
+    assert satisfies(make_recipe("m", ingredients=["1 eggplant"]), no_egg)
+    no_dairy = Constraints(exclude_ingredients=["dairy"])
+    assert not satisfies(make_recipe("n", ingredients=["1 cup cream"]), no_dairy)
+    assert satisfies(make_recipe("o", ingredients=["1 cup coconut milk"]), no_dairy)
 
 
 def test_hybrid_applies_filters_before_ranking(small_corpus: list[Recipe]) -> None:
