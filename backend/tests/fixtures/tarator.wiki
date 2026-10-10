@@ -1,0 +1,23 @@
+{{Recipe summary
+| Category = Soup recipes
+| Difficulty = 1
+}}
+
+{{recipe}}
+
+== Ingredients ==
+* 500 [[Cookbook:Gram|g]] plain [[Cookbook:Yogurt|yogurt]]
+* 1 [[Cookbook:Cup|cup]] (240 [[Cookbook:Milliliter|ml]]) water
+* 1–2 [[Cookbook:Cucumber|cucumbers]], diced
+* [[Cookbook:Salt|Salt]], to taste
+* A couple of spoonfuls chopped [[Cookbook:Walnut|walnuts]] (optional)
+
+== Procedure ==
+# Mix all the ingredients, using enough water so the soup is about the consistency of milk
+# Serve cold in a soup dish, adding a couple ice cubes if it's not cold.
+
+== Notes, tips, and variations ==
+* You can make a salad from it. It is called ''snezhanka''.
+
+[[Category:Soup recipes]]
+[[Category:Recipes using yogurt]]
