@@ -190,7 +190,12 @@ def create_app(
                 }
             },
         )
-        return JSONResponse(content=response.model_dump())
+        usage = {
+            "X-LLM-Model": trace.model or "none",
+            "X-LLM-Input-Tokens": str(trace.input_tokens),
+            "X-LLM-Output-Tokens": str(trace.output_tokens),
+        }
+        return JSONResponse(content=response.model_dump(), headers=usage)
 
     if settings.static_dir.is_dir():
         app.mount("/", StaticFiles(directory=settings.static_dir, html=True), name="ui")

@@ -1,0 +1,225 @@
+{
+  "$defs": {
+    "AllergyCheck": {
+      "additionalProperties": false,
+      "properties": {
+        "allergens": {
+          "items": {
+            "enum": [
+              "tree_nut",
+              "peanut",
+              "dairy",
+              "egg",
+              "gluten",
+              "fish",
+              "shellfish",
+              "soy",
+              "sesame"
+            ],
+            "type": "string"
+          },
+          "title": "Allergens",
+          "type": "array"
+        },
+        "matches": {
+          "items": {
+            "$ref": "#/$defs/AllergyMatch"
+          },
+          "title": "Matches",
+          "type": "array"
+        }
+      },
+      "required": [
+        "allergens",
+        "matches"
+      ],
+      "title": "AllergyCheck",
+      "type": "object"
+    },
+    "AllergyMatch": {
+      "additionalProperties": false,
+      "properties": {
+        "allergen": {
+          "enum": [
+            "tree_nut",
+            "peanut",
+            "dairy",
+            "egg",
+            "gluten",
+            "fish",
+            "shellfish",
+            "soy",
+            "sesame"
+          ],
+          "title": "Allergen",
+          "type": "string"
+        },
+        "ingredient": {
+          "title": "Ingredient",
+          "type": "string"
+        },
+        "recipe_id": {
+          "title": "Recipe Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "recipe_id",
+        "allergen",
+        "ingredient"
+      ],
+      "title": "AllergyMatch",
+      "type": "object"
+    },
+    "Citation": {
+      "additionalProperties": false,
+      "properties": {
+        "recipe_id": {
+          "title": "Recipe Id",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "url": {
+          "title": "Url",
+          "type": "string"
+        }
+      },
+      "required": [
+        "recipe_id",
+        "title",
+        "url"
+      ],
+      "title": "Citation",
+      "type": "object"
+    },
+    "Constraints": {
+      "description": "Hard filters parsed from a question (SPEC 5.1).",
+      "properties": {
+        "diet": {
+          "anyOf": [
+            {
+              "enum": [
+                "vegetarian",
+                "vegan"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Diet"
+        },
+        "exclude_ingredients": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Exclude Ingredients",
+          "type": "array"
+        },
+        "max_total_minutes": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max Total Minutes"
+        }
+      },
+      "title": "Constraints",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Every 200 response from /ask, answer or refusal. Invariants I1-I5 are enforced here.",
+  "properties": {
+    "allergy_check": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/AllergyCheck"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "answer": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Answer"
+    },
+    "citations": {
+      "items": {
+        "$ref": "#/$defs/Citation"
+      },
+      "title": "Citations",
+      "type": "array"
+    },
+    "constraints": {
+      "$ref": "#/$defs/Constraints"
+    },
+    "refusal_reason": {
+      "anyOf": [
+        {
+          "enum": [
+            "out_of_corpus",
+            "out_of_domain",
+            "safety"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Refusal Reason"
+    },
+    "refused": {
+      "title": "Refused",
+      "type": "boolean"
+    },
+    "request_id": {
+      "minLength": 1,
+      "title": "Request Id",
+      "type": "string"
+    },
+    "safety_notice": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Safety Notice"
+    }
+  },
+  "required": [
+    "answer",
+    "citations",
+    "refused",
+    "refusal_reason",
+    "safety_notice",
+    "allergy_check",
+    "constraints",
+    "request_id"
+  ],
+  "title": "AskResponse",
+  "type": "object"
+}

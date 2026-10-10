@@ -246,3 +246,16 @@ def test_response_model_rejects_broken_invariants() -> None:
             constraints={"max_total_minutes": None, "diet": None, "exclude_ingredients": []},  # type: ignore[arg-type]
             request_id="r",
         )
+
+
+def test_committed_schema_file_is_current() -> None:
+    from recipe_qa.export_schema import SCHEMA_PATH, render
+
+    assert SCHEMA_PATH.read_text() == render(), "run: make schema"
+
+
+def test_usage_headers(corpus: list[Recipe]) -> None:
+    resp = _client(corpus, ScriptedGenerator()).post("/ask", json={"question": "carbonara"})
+    assert resp.headers["x-llm-model"] == "fake-model"
+    assert resp.headers["x-llm-input-tokens"] == "100"
+    assert resp.headers["x-llm-output-tokens"] == "20"
