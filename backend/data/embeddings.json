@@ -1,7 +1,7 @@
 {
  "model": "gemini-embedding-001",
  "dim": 768,
- "corpus_sha256": "80f7f9913edeb04a586af7b1ad20c7d8be7c752029f8ecc023078cac88784765",
+ "corpus_sha256": "4f5545f44e0ca39c6067e411176cbaac64222e6add5eb4f05b3a86cc637848f5",
  "ids": [
   "algerian-white-chicken-vermicelli-soup-chorba-beida",
   "american-marinara-sauce-i",

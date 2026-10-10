@@ -1,6 +1,6 @@
 """Hard constraint filters (SPEC 5.1). A recipe passes only if it provably fits."""
 
-from recipe_qa.lexicon import matching_lines
+from recipe_qa.lexicon import exclusion_terms, matching_lines
 from recipe_qa.models import Constraints, Recipe
 
 _DIET_SATISFIES = {"vegetarian": {"vegetarian", "vegan"}, "vegan": {"vegan"}}
@@ -13,6 +13,8 @@ def satisfies(recipe: Recipe, constraints: Constraints) -> bool:
         return False
     if constraints.diet is not None and recipe.diet not in _DIET_SATISFIES[constraints.diet]:
         return False
-    return not any(
-        matching_lines(recipe.ingredients, (word,)) for word in constraints.exclude_ingredients
-    )
+    for word in constraints.exclude_ingredients:
+        terms, ignore_plant = exclusion_terms(word)
+        if matching_lines(recipe.ingredients, terms, ignore_plant_phrases=ignore_plant):
+            return False
+    return True

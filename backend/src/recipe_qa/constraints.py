@@ -18,11 +18,13 @@ _BOUND = (
 # A number is required ("within minutes" is not a limit); "an hour" counts as 1 hour.
 _DUR = (
     r"(?:(?P<half_an>half an? hour)|"
-    r"(?P<num>\d+(?:\.\d+)?|one|two|three|four|five)\s*(?P<unit>hours?|hrs?|minutes?|mins?)|"
+    r"(?P<num>\d+(?:\.\d+)?|one|two|three|four|five)[\s-]*(?P<unit>hours?|hrs?|minutes?|mins?)|"
     r"(?P<an>an?) (?P<unit_an>hour))\b(?P<and_half>\s+and\s+a\s+half)?"
 )
 _TIME_RES = (
     re.compile(rf"\b{_BOUND}\s+{_DUR}", re.IGNORECASE),
+    # adjectival form: "a 30-minute dinner"
+    re.compile(r"\b(?P<num>\d+(?:\.\d+)?)-(?P<unit>hours?|hrs?|minutes?|mins?)\b", re.IGNORECASE),
     re.compile(rf"\b{_DUR}\s+or\s+(?:less|under|fewer)\b", re.IGNORECASE),
 )
 
@@ -76,6 +78,15 @@ _NOT_INGREDIENTS = frozenset(
         "special",
         "equipment",
         "experience",
+        "having",
+        "shop",
+        "shopping",
+        "going",
+        "getting",
+        "spending",
+        "waiting",
+        "much",
+        "too",
         "skill",
         "skills",
         "money",
@@ -105,14 +116,15 @@ _SAFETY_RES = (
 
 
 def _minutes(m: re.Match[str]) -> int:
-    if m.group("half_an"):
+    g = m.groupdict()
+    if g.get("half_an"):
         return 30
-    raw = (m.group("num") or m.group("an")).lower()
-    unit = (m.group("unit") or m.group("unit_an")).lower()
+    raw = (g.get("num") or g.get("an") or "1").lower()
+    unit = (g.get("unit") or g.get("unit_an") or "minute").lower()
     value = float(_WORD_NUMBERS[raw]) if raw in _WORD_NUMBERS else float(raw)
     if unit.startswith("h"):
         value *= 60
-        if m.group("and_half"):
+        if g.get("and_half"):
             value += 30
     return round(value)
 
@@ -127,21 +139,6 @@ def _singular(word: str) -> str:
     return word
 
 
-# Allergen group names (not single foods): naming one in a containment question is an
-# allergy question; "a walnut cake recipe" is not.
-_GROUP_NAMES = {
-    "tree_nut": ("nut", "tree nut"),
-    "peanut": ("peanut",),
-    "dairy": ("dairy", "lactose"),
-    "egg": ("egg",),
-    "gluten": ("gluten", "wheat"),
-    "fish": ("fish",),
-    "shellfish": ("shellfish",),
-    "soy": ("soy", "soya"),
-    "sesame": ("sesame",),
-}
-
-
 def _is_allergen_word(word: str) -> bool:
     return any(contains_any(word, terms) for terms in ALLERGEN_QUESTION_WORDS.values())
 
@@ -151,7 +148,14 @@ def parse_max_minutes(question: str) -> int | None:
     return min(found) if found else None
 
 
+# "not vegetarian", "I'm not a vegan": a negated diet is no constraint.
+_NEGATED_DIET_RE = re.compile(
+    r"\bnot\s+(?:an?\s+)?(?:vegetarian|vegan|veggie|plant[- ]based)\b", re.IGNORECASE
+)
+
+
 def parse_diet(question: str) -> Diet | None:
+    question = _NEGATED_DIET_RE.sub(" ", question)
     if _VEGAN_RE.search(question):
         return "vegan"
     if _VEGETARIAN_RE.search(question):
@@ -159,12 +163,18 @@ def parse_diet(question: str) -> Diet | None:
     return None
 
 
+# "Is the pesto nut-free?" asks about a dish; it is not a request to filter it out.
+_ASKS_IF_FREE_RE = re.compile(r"^\s*(?:is|are)\b[^?]*\b[a-z]+[- ]free\b", re.IGNORECASE)
+
+
 def parse_excluded(question: str) -> list[str]:
     found: list[str] = []
-    for regex in _EXCLUDE_RES:
+    for n, regex in enumerate(_EXCLUDE_RES):
+        if n == 1 and _ASKS_IF_FREE_RE.search(question):
+            continue
         for m in regex.finditer(question):
             word = m.group(1).lower()
-            if word in _NOT_INGREDIENTS or _is_allergen_word(word):
+            if word in _NOT_INGREDIENTS:
                 continue
             found.append(_singular(word))
     # Keep order of appearance in the question.
@@ -181,7 +191,7 @@ def parse_constraints(question: str) -> Constraints:
 
 # "Does X contain nuts?", "is there egg in it?", "any dairy?" (SPEC 5.4.2)
 _CONTAINS_RE = re.compile(
-    r"\b(?:contains?|containing|is there|are there|any|has|have|with|include[sd]?)\b",
+    r"\b(?:contains?|containing|include[sd]?|including|any|ha(?:s|ve)\s+(?:any\s+)?)\b",
     re.IGNORECASE,
 )
 
@@ -190,7 +200,7 @@ def is_allergy_question(question: str) -> bool:
     if _ALLERGY_WORDS_RE.search(question):
         return True
     if _CONTAINS_RE.search(question) and any(
-        contains_any(question, words) for words in _GROUP_NAMES.values()
+        contains_any(question, words) for words in ALLERGEN_QUESTION_WORDS.values()
     ):
         return True
     for regex in _EXCLUDE_RES:

@@ -190,6 +190,27 @@ ALLERGEN_QUESTION_WORDS: dict[str, tuple[str, ...]] = {
 }  # fmt: skip
 
 
+# Allergen group names (not single foods). In a question they name the whole group:
+# "without nuts" excludes every tree-nut line, "without cheese" only cheese.
+ALLERGEN_GROUP_NAMES: dict[str, tuple[str, ...]] = {
+    "tree_nut": ("nut", "tree nut"),
+    "peanut": ("peanut",),
+    "dairy": ("dairy", "lactose"),
+    "egg": ("egg",),
+    "gluten": ("gluten", "wheat"),
+    "fish": ("fish",),
+    "shellfish": ("shellfish",),
+    "soy": ("soy", "soya"),
+    "sesame": ("sesame",),
+}
+
+# Groups where plant phrases such as "coconut milk" must not count as a match.
+PLANT_PHRASE_GROUPS = frozenset({"dairy", "egg"})
+
+# An ingredient line that is another recipe ("1 recipe Flaky Pie Crust") cannot be
+# checked against the lexicon, so the diet of the whole recipe is unknown.
+_SUB_RECIPE = re.compile(r"\brecipes?\b", re.IGNORECASE)
+
 # Plant-based phrases that would otherwise match an animal-product word.
 PLANT_PHRASES = re.compile(
     r"\b(?:coconut|almond|soy|soya|oat|rice|cashew)\s+(?:milk|cream|yogurt|yoghurt)\b"
@@ -220,7 +241,7 @@ def matching_lines(
 def diet_from(categories: Iterable[str], ingredients: list[str]) -> Diet | None:
     """Diet tag from Wikibooks categories, guarded by the ingredient lexicon."""
     cats = set(categories)
-    if matching_lines(ingredients, MEAT_FISH):
+    if matching_lines(ingredients, MEAT_FISH) or any(_SUB_RECIPE.search(i) for i in ingredients):
         return None
     if "Vegan recipes" in cats and not matching_lines(
         ingredients, ANIMAL_PRODUCTS, ignore_plant_phrases=True
@@ -229,3 +250,12 @@ def diet_from(categories: Iterable[str], ingredients: list[str]) -> Diet | None:
     if cats & {"Vegan recipes", "Vegetarian recipes"}:
         return "vegetarian"
     return None
+
+
+def exclusion_terms(word: str) -> tuple[tuple[str, ...], bool]:
+    """Lexicon terms for an excluded word, and whether plant phrases are ignored."""
+    for group, names in ALLERGEN_GROUP_NAMES.items():
+        if word in names:
+            return ALLERGENS[group], group in PLANT_PHRASE_GROUPS
+    in_plant_group = any(word in ALLERGENS[g] for g in PLANT_PHRASE_GROUPS)
+    return (word,), in_plant_group

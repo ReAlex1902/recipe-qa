@@ -1488,7 +1488,7 @@
     "Vegan recipes"
    ],
    "cuisines": [],
-   "diet": "vegan",
+   "diet": null,
    "dish_categories": [
     "Pie",
     "Dessert"

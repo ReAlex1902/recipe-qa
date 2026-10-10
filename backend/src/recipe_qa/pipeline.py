@@ -14,7 +14,7 @@ from recipe_qa.constraints import (
     parse_constraints,
     safety_precheck,
 )
-from recipe_qa.lexicon import ALLERGENS, matching_lines
+from recipe_qa.lexicon import ALLERGENS, PLANT_PHRASE_GROUPS, matching_lines
 from recipe_qa.llm import Generation
 from recipe_qa.models import Constraints, Recipe
 from recipe_qa.ratelimit import DailyBudget
@@ -60,10 +60,6 @@ def deterministic_allergy_answer(
         else:
             lines.append(f"The listed ingredients of {r.title} do not mention {names}.")
     return " ".join(lines) + " See the notice below before cooking."
-
-
-# Groups where plant phrases such as "coconut milk" must not count as a match.
-_PLANT_PHRASE_GROUPS = {"dairy", "egg"}
 
 
 class BudgetExhaustedError(RuntimeError):
@@ -149,7 +145,7 @@ def allergy_matches(recipes: Sequence[Recipe], groups: Sequence[str]) -> list[Al
         for r in recipes
         for g in groups
         for line in matching_lines(
-            r.ingredients, ALLERGENS[g], ignore_plant_phrases=g in _PLANT_PHRASE_GROUPS
+            r.ingredients, ALLERGENS[g], ignore_plant_phrases=g in PLANT_PHRASE_GROUPS
         )
     ]
 
