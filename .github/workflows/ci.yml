@@ -98,16 +98,23 @@ jobs:
       group: deploy-production
       cancel-in-progress: false
     env:
-      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
       OPS_TOKEN: ${{ secrets.OPS_TOKEN }}
       GIT_SHA: ${{ github.sha }}
     steps:
       - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: build UI
+        run: npm ci && npm run build
+        working-directory: frontend
       - id: deploy
-        name: deploy this commit to Render
-        run: python3 deploy/render.py deploy
+        name: deploy this commit to Vercel production
+        run: python3 deploy/vercel.py deploy
         env:
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
-          GITHUB_REPO: ${{ github.repository }}
       - name: smoke test the live service
-        run: python3 deploy/render.py verify
+        run: python3 deploy/vercel.py verify

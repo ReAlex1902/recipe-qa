@@ -23,7 +23,7 @@ jobs:
       - run: uv sync --frozen --project backend
       - run: uv run --project backend python evals/run_evals.py --base-url "${BASE_URL}"
         env:
-          BASE_URL: ${{ inputs.base_url || vars.PUBLIC_URL }}
+          BASE_URL: ${{ inputs.base_url || 'https://recipe-qa.vercel.app' }}
       - if: always()
         uses: actions/upload-artifact@v7
         with:
