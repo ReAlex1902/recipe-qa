@@ -1,14 +1,27 @@
 version: 2
+# Weekly minor/patch updates only; major upgrades are a deliberate, reviewed change.
 updates:
   - package-ecosystem: uv
     directory: /backend
     schedule: {interval: weekly}
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: npm
     directory: /frontend
     schedule: {interval: weekly}
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
     schedule: {interval: weekly}
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: docker
     directory: /
     schedule: {interval: weekly}
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
