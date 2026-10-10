@@ -16,6 +16,8 @@ Environment:
     OPS_TOKEN        bearer token for /ops/* endpoints     (deploy, verify)
 """
 
+from __future__ import annotations
+
 import json
 import os
 import shutil
