@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Recipe Q&amp;A</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Recipe Q&amp;A</h1>
+      <p class="hint">
+        Answers come only from 52 recipes of the
+        <a href="https://en.wikibooks.org/wiki/Cookbook" target="_blank" rel="noopener">Wikibooks Cookbook</a>.
+      </p>
+      <form id="ask-form">
+        <label for="question">Your question</label>
+        <textarea id="question" name="question" rows="3" maxlength="500" required
+          placeholder="What's a vegetarian dinner I can make in under 30 minutes?"></textarea>
+        <div class="row">
+          <button id="submit" type="submit">Ask</button>
+          <span id="counter" class="hint">0 / 500</span>
+        </div>
+      </form>
+      <div class="examples">
+        <span class="hint">Try:</span>
+        <button type="button" class="example">How do I make carbonara?</button>
+        <button type="button" class="example">What's a vegetarian dinner I can make in under 30 minutes?</button>
+        <button type="button" class="example">Is the pesto nut-free?</button>
+        <button type="button" class="example">How do I make sushi?</button>
+      </div>
+      <section id="result" aria-live="polite"></section>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
