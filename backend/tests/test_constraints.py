@@ -221,3 +221,18 @@ def test_time_ranges_in_questions_use_the_upper_bound(question: str, minutes: in
 def test_sub_recipe_detection_needs_a_quantity() -> None:
     assert diet_from(["Vegan recipes"], ["rice (see recipe note)"]) == "vegan"
     assert diet_from(["Vegan recipes"], ["1 recipe Flaky Pie Crust"]) is None
+
+
+# Review 4: an article before the exclusion marks a request even inside a dish clause
+@pytest.mark.parametrize(
+    ("question", "excluded"),
+    [
+        ("Is it possible to make a dessert without eggs?", ["egg"]),
+        ("Does the cookbook have a nut-free dessert?", ["nut"]),
+        ("Is this a good soup without cream?", ["cream"]),
+        ("Is the pesto nut-free?", []),
+        ("Is the carbonara made without eggs?", []),
+    ],
+)
+def test_article_before_exclusion_means_request(question: str, excluded: list[str]) -> None:
+    assert parse_constraints(question).exclude_ingredients == excluded
