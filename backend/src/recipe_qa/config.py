@@ -43,10 +43,8 @@ class Settings(BaseSettings):
     ops_token: SecretStr | None = None
 
     log_level: str = "INFO"
-    # Render sets RENDER_GIT_COMMIT for every deploy; GIT_SHA is used by local/CI images.
-    git_sha: str = Field(
-        default="dev", validation_alias=AliasChoices("RENDER_GIT_COMMIT", "GIT_SHA")
-    )
+    # Set by the image build (Docker) or the deploy script (Vercel); "dev" locally.
+    git_sha: str = Field(default="dev", validation_alias=AliasChoices("GIT_SHA"))
 
     @property
     def llm_model_chain(self) -> list[str]:

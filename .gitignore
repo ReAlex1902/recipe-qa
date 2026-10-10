@@ -24,3 +24,8 @@ frontend/dist/
 evals/reports/
 
 .DS_Store
+
+# UI build copied into the backend for the Vercel bundle
+backend/static_ui/
+.vercel/
+backend/.vercel/
