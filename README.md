@@ -70,6 +70,7 @@ make test                          # ruff, mypy --strict, pytest, tsc
 make eval BASE_URL=http://localhost:8000   # golden set against a running service
 make ingest                        # rebuild the corpus from the MediaWiki API
 make ingest-pinned                 # rebuild byte-identically from the recorded revisions
+make embed                         # recompute corpus embeddings after a corpus change (needs the key)
 ```
 
 ## Corpus
