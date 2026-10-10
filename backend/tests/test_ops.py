@@ -17,7 +17,7 @@ from recipe_qa.retrieval import HybridRetriever
 from .conftest import FakeEmbedder
 from .test_api import ScriptedGenerator
 
-TOKEN = "s3cret-ops-token"
+TOKEN = "test-ops-token"  # noqa: S105 - test fixture, not a secret
 
 
 def _client(corpus: list[Recipe], ops_token: str | None) -> TestClient:
@@ -66,9 +66,7 @@ def test_ops_logs_returns_recent_json_lines(small_corpus: list[Recipe]) -> None:
         client = _client(small_corpus, TOKEN)
         for n in range(5):
             logging.getLogger("recipe_qa").warning("line %d", n)
-        body = client.get(
-            "/ops/logs?limit=2", headers={"Authorization": f"Bearer {TOKEN}"}
-        ).json()
+        body = client.get("/ops/logs?limit=2", headers={"Authorization": f"Bearer {TOKEN}"}).json()
     finally:
         logging.getLogger().removeHandler(handler)
     assert [e["msg"] for e in body["lines"]] == ["line 3", "line 4"]

@@ -74,6 +74,9 @@ class ResponseCache:
             self._items.move_to_end(key)
             return item[1]
 
+    def __len__(self) -> int:
+        return len(self._items)
+
     def put(self, question: str, response: AskResponse) -> None:
         with self._lock:
             self._items[normalize_question(question)] = (time.monotonic() + self._ttl_s, response)

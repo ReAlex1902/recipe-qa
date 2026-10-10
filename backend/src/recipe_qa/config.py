@@ -39,6 +39,9 @@ class Settings(BaseSettings):
     # 0 = use the socket peer address (local / tests).
     trusted_proxy_hops: int = 0
 
+    # Bearer token for GET /ops/status and /ops/logs. Unset = endpoints disabled (404).
+    ops_token: SecretStr | None = None
+
     log_level: str = "INFO"
     git_sha: str = "dev"
 

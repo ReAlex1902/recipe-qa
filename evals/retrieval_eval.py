@@ -20,6 +20,32 @@ from recipe_qa.retrieval import HybridRetriever, reciprocal_rank_fusion
 EVALS = Path(__file__).resolve().parent
 TOP_K = 5
 
+# Paraphrased questions that avoid the recipe's title words (retrieval-only, not golden).
+PARAPHRASES = [
+    (
+        "cold-summer-soup",
+        "a chilled yogurt soup for a hot summer day",
+        ["tarator-bulgarian-cucumber-soup"],
+    ),
+    ("coffee-dessert", "a no-bake Italian dessert flavoured with espresso", ["tiramisu"]),
+    ("spicy-thai-soup", "a hot and sour Thai soup with lemongrass", ["tom-yum-gai"]),
+    ("fried-dough", "fried dough sticks rolled in cinnamon sugar", ["churros-i"]),
+    ("avocado-dip", "a dip made from mashed avocados", ["guacamole-i", "chunky-guacamole"]),
+    ("syrup-waffles", "thin waffle cookies filled with caramel syrup", ["stroopwafels"]),
+    ("viennese-cake", "a Viennese chocolate cake with apricot jam", ["sachertorte"]),
+    (
+        "flattened-rice",
+        "an Indian breakfast of beaten rice with peanuts",
+        ["pohe-spiced-flattened-rice"],
+    ),
+    ("clam-pasta", "pasta with shellfish, garlic and white wine", ["spaghetti-with-clams"]),
+    (
+        "almond-cookies",
+        "crescent-shaped Christmas biscuits with ground nuts",
+        ["vanillekipferl-almond-crescent-cookies"],
+    ),
+]
+
 
 def main() -> None:
     settings = Settings()  # type: ignore[call-arg]
@@ -30,6 +56,9 @@ def main() -> None:
     by_id = {r.id: r for r in recipes}
 
     cases = yaml.safe_load((EVALS / "golden.yaml").read_text())["cases"]
+    cases += [
+        {"id": cid, "question": q, "expect": {"cite_any": ids}} for cid, q, ids in PARAPHRASES
+    ]
     totals = {"bm25": 0, "vector": 0, "hybrid": 0}
     n = 0
     print(f"{'case':26} {'bm25':>5} {'vector':>6} {'hybrid':>6}")

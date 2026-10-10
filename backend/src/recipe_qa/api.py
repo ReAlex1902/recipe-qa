@@ -1,16 +1,22 @@
 """HTTP layer: routing, validation errors, request ids, limits, logging, static UI."""
 
 import dataclasses
+import hmac
 import json
 import logging
+import os
 import re
+import resource
+import socket
+import sys
 import time
 import uuid
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime
 from pathlib import Path
 
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, HTTPException, Query, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -18,6 +24,7 @@ from starlette.concurrency import run_in_threadpool
 
 from recipe_qa.config import Settings
 from recipe_qa.llm import GeminiEmbedder, GeminiGenerator, UpstreamError, make_client
+from recipe_qa.logging_setup import ring_buffer
 from recipe_qa.models import Recipe
 from recipe_qa.pipeline import BudgetExhaustedError, Pipeline, ResponseCache
 from recipe_qa.ratelimit import DailyBudget, RateLimiter
@@ -33,7 +40,7 @@ SECURITY_HEADERS = {
     "Referrer-Policy": "no-referrer",
     "Content-Security-Policy": (
         "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
-        "img-src 'self' data:; connect-src 'self'; frame-ancestors https://huggingface.co"
+        "img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'"
     ),
 }
 
@@ -75,6 +82,19 @@ def client_ip(request: Request, trusted_hops: int) -> str:
     forwarded = [p.strip() for p in request.headers.get("x-forwarded-for", "").split(",")]
     forwarded = [p for p in forwarded if p]
     return forwarded[-trusted_hops] if len(forwarded) >= trusted_hops else peer
+
+
+def _memory_rss_mb() -> float:
+    """Resident memory of this process (Linux: current; elsewhere: peak)."""
+    try:
+        with open("/proc/self/status") as f:
+            for line in f:
+                if line.startswith("VmRSS:"):
+                    return round(int(line.split()[1]) / 1024, 1)
+    except OSError:
+        pass
+    peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    return round(peak / (1024 * 1024 if sys.platform == "darwin" else 1024), 1)
 
 
 def create_app(
@@ -133,6 +153,10 @@ def create_app(
                         "path": request.url.path,
                         "status": response.status_code,
                         "duration_ms": round((time.perf_counter() - start) * 1000, 1),
+                        # number of proxies seen; used to set TRUSTED_PROXY_HOPS correctly
+                        "xff_entries": len(
+                            [p for p in request.headers.get("x-forwarded-for", "").split(",") if p]
+                        ),
                     }
                 },
             )
@@ -144,6 +168,52 @@ def create_app(
         where = ".".join(str(p) for p in first.get("loc", ()) if p != "body")
         message = f"{where}: {first.get('msg', 'invalid request')}" if where else "invalid JSON"
         return _error(422, "invalid_request", message, request.state.request_id)
+
+    started = time.monotonic()
+    started_at = datetime.now(UTC).isoformat(timespec="seconds")
+
+    def require_ops_token(request: Request) -> None:
+        if settings.ops_token is None:
+            raise HTTPException(status_code=404)
+        expected = f"Bearer {settings.ops_token.get_secret_value()}"
+        given = request.headers.get("authorization", "")
+        if not hmac.compare_digest(given.encode(), expected.encode()):
+            raise HTTPException(status_code=401, headers={"WWW-Authenticate": "Bearer"})
+
+    @app.get("/ops/status", include_in_schema=False)
+    async def ops_status(request: Request) -> dict[str, object]:
+        require_ops_token(request)
+        p: Pipeline = request.app.state.pipeline
+        times = os.times()
+        generator = p.generator
+        return {
+            "version": settings.git_sha,
+            "instance": os.environ.get("RENDER_INSTANCE_ID", socket.gethostname()),
+            "started_at": started_at,
+            "process": {
+                "pid": os.getpid(),
+                "uptime_s": round(time.monotonic() - started),
+                "memory_rss_mb": _memory_rss_mb(),
+                "cpu_user_s": round(times.user, 2),
+                "cpu_system_s": round(times.system, 2),
+                "python": sys.version.split()[0],
+            },
+            "corpus_size": len(p.retriever._recipes),
+            "embeddings_ready": p.retriever.has_embeddings,
+            "models": settings.llm_model_chain,
+            "model_cooldowns_s": generator.cooldowns() if hasattr(generator, "cooldowns") else {},
+            "llm_budget": {"used": p.budget.used, "limit": p.budget.limit},
+            "cache_entries": len(p.cache),
+            "rate_limit_per_minute": settings.rate_limit_per_minute,
+        }
+
+    @app.get("/ops/logs", include_in_schema=False)
+    async def ops_logs(
+        request: Request, limit: int = Query(200, ge=1, le=2000)
+    ) -> dict[str, object]:
+        require_ops_token(request)
+        ring = ring_buffer()
+        return {"lines": ring.tail(limit) if ring else []}
 
     @app.get("/healthz")
     async def healthz(request: Request) -> dict[str, object]:

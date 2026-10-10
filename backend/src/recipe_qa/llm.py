@@ -169,6 +169,11 @@ class GeminiGenerator:
         self._clock = clock
         self._skip_until: dict[str, float] = {}
 
+    def cooldowns(self) -> dict[str, float]:
+        """Models currently skipped after a quota error -> seconds left."""
+        now = self._clock()
+        return {m: round(t - now) for m, t in self._skip_until.items() if t > now}
+
     def _call(self, model: str, prompt: str, config: types.GenerateContentConfig) -> Generation:
         resp = self._client.models.generate_content(model=model, contents=prompt, config=config)
         try:

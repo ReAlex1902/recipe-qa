@@ -61,3 +61,7 @@ class DailyBudget:
     @property
     def used(self) -> int:
         return self._used
+
+    @property
+    def limit(self) -> int:
+        return self._limit
