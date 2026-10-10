@@ -131,3 +131,11 @@ def test_parse_recipe_subsections_inherit_parent_section() -> None:
     assert r.steps == ["Mix well.", "Melt the butter."]
     assert r.notes == "Notes: Serve warm."
     assert r.dish_categories == ["Cookie"]
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [("30 minutes to 1 hour", 60), ("1/2 hour", 30), ("1:30 hours", 90)],
+)
+def test_parse_minutes_review_cases(text: str, expected: int) -> None:
+    assert parse_minutes(text) == expected

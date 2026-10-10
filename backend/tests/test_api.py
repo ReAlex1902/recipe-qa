@@ -277,3 +277,43 @@ def test_failures_are_not_cached(corpus: list[Recipe]) -> None:
     client.post("/ask", json={"question": "carbonara"})
     client.post("/ask", json={"question": "carbonara"})
     assert len(gen.calls) == 2
+
+
+def test_allergy_answer_claiming_absence_is_replaced(corpus: list[Recipe]) -> None:
+    gen = ScriptedGenerator(recipe_ids=["pesto"], answer="Yes, the pesto is nut-free and safe.")
+    body = _ask(_client(corpus, gen), "Is the pesto nut-free?")
+    assert body["refused"] is False
+    assert "nut-free" not in str(body["answer"]).lower()
+    assert "safe" not in str(body["answer"]).lower()
+    assert "pine nuts" in str(body["answer"])  # deterministic listing of matches
+
+
+def test_budget_exhausted_before_retrieval(corpus: list[Recipe]) -> None:
+    embedder = FakeEmbedder()
+    settings = Settings(google_api_key=SecretStr("test"))
+    pipeline = Pipeline(
+        retriever=HybridRetriever(corpus, embedder),
+        generator=ScriptedGenerator(),
+        budget=DailyBudget(0),
+    )
+    client = TestClient(create_app(settings, pipeline=pipeline))
+    calls_after_startup = embedder.calls
+    assert client.post("/ask", json={"question": "carbonara"}).status_code == 503
+    assert embedder.calls == calls_after_startup  # no embedding spent
+
+
+def test_log_lines_inside_a_request_carry_request_id(corpus: list[Recipe]) -> None:
+    import logging
+
+    from recipe_qa.logging_setup import RingBufferHandler, RequestIdFilter
+
+    handler = RingBufferHandler(capacity=50)
+    handler.addFilter(RequestIdFilter())
+    logging.getLogger().addHandler(handler)
+    try:
+        client = _client(corpus, ScriptedGenerator(fail=True))
+        client.post("/ask", json={"question": "carbonara"}, headers={"x-request-id": "rid-1"})
+    finally:
+        logging.getLogger().removeHandler(handler)
+    lines = [e for e in handler.tail(50) if e["logger"].startswith("recipe_qa")]
+    assert lines and all(e.get("request_id") == "rid-1" for e in lines)

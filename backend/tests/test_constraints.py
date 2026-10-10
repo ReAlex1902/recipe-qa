@@ -96,3 +96,41 @@ def test_diet_from_categories_and_lexicon() -> None:
     # tag says vegetarian, ingredients say otherwise -> unknown
     assert diet_from(["Vegetarian recipes"], ["2 cups chicken stock"]) is None
     assert diet_from(["Italian recipes"], ["1 cup rice"]) is None
+
+
+# Review findings (2026-10-10)
+@pytest.mark.parametrize(
+    ("question", "groups"),
+    [
+        ("Does the pesto contain nuts?", ["tree_nut"]),
+        ("I am allergic to cheese, which pasta?", ["dairy"]),
+        ("is there pine nut in it? I have an allergy", ["tree_nut"]),
+    ],
+)
+def test_naming_an_allergen_enables_allergy_mode(question: str, groups: list[str]) -> None:
+    assert allergens_in_question(question) == groups
+
+
+@pytest.mark.parametrize(
+    ("question", "minutes"),
+    [("something I can make within minutes", None), ("which dish takes hours?", None),
+     ("ready in an hour", 60)],
+)
+def test_durations_need_a_number(question: str, minutes: int | None) -> None:
+    assert parse_constraints(question).max_total_minutes == minutes
+
+
+def test_non_vegan_is_not_vegan() -> None:
+    assert parse_constraints("Give me a non-vegan dessert").diet is None
+
+
+@pytest.mark.parametrize("question", ["pasta with no meat", "a soup without meat"])
+def test_no_meat_means_vegetarian(question: str) -> None:
+    assert parse_constraints(question).diet == "vegetarian"
+
+
+@pytest.mark.parametrize(
+    "question", ["I have no idea what to cook", "a cake without using an oven"]
+)
+def test_non_ingredient_words_are_not_exclusions(question: str) -> None:
+    assert parse_constraints(question).exclude_ingredients == []
