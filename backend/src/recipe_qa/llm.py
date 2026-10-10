@@ -13,6 +13,7 @@ from google.genai import errors, types
 from pydantic import BaseModel, ValidationError
 
 from recipe_qa.models import Constraints, Recipe
+from recipe_qa.retrieval import same_dish_groups
 
 log = logging.getLogger(__name__)
 
@@ -39,7 +40,9 @@ Rules for "answer":
    temperatures or steps that are not in the recipe text.
 2. Name the recipe title for every recipe you use.
 3. If several recipes describe the same dish differently, present each version separately
-   with its title and the main differences. Never merge them into one recipe.
+   with its title and the main differences, and cite all of them. Never merge them into
+   one recipe. <same_dish> lists recipes the server found to be versions of one dish: if
+   the question is about that dish, you MUST cover every recipe in that group.
 4. The recipes were already filtered by the server for these hard constraints: {constraints}.
    Respect any other wish in the question (meal, cuisine, ingredient) using the recipe text.
 5. For "how do I make X", give the ingredients and numbered steps of the recipe.
@@ -50,9 +53,11 @@ When decision is not "answer", set answer to "" and recipe_ids to [].
 """
 
 ALLERGY_RULES = """\
-7. This is an allergy question. Never say a recipe is free of an allergen, safe, or
-   suitable for an allergy. Say which listed ingredients contain the allergen, or say that
-   the listed ingredients do not mention it. Do not guess about packaged ingredients.
+7. This is an allergy question. Start by listing, word for word, every ingredient line
+   that contains the allergen, or say that the listed ingredients do not mention it.
+   Never say a recipe or a substitute is free of an allergen, safe, or suitable for an
+   allergy, and do not repeat such claims from the recipe text: recipe authors can be
+   wrong. Do not guess about packaged ingredients.
 """
 
 
@@ -78,8 +83,14 @@ class Generation:
 
 def build_user_prompt(question: str, recipes: Sequence[Recipe]) -> str:
     blocks = "\n".join(f'<recipe id="{r.id}">\n{r.as_prompt_text()}\n</recipe>' for r in recipes)
-    # json.dumps escapes quotes and control characters, so the question cannot close the tag.
-    return f"<question>{json.dumps(question)}</question>\n<recipes>\n{blocks}\n</recipes>"
+    groups = same_dish_groups(recipes)
+    same_dish = "\n".join(", ".join(g) for g in groups) or "none"
+    # JSON-encode and escape '<' so the question cannot open or close a tag.
+    q = json.dumps(question).replace("<", "\\u003c")
+    return (
+        f"<question>{q}</question>\n<same_dish>\n{same_dish}\n</same_dish>\n"
+        f"<recipes>\n{blocks}\n</recipes>"
+    )
 
 
 def _retry[T](call: Callable[[], T], what: str) -> T:

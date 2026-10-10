@@ -166,3 +166,33 @@ class HybridRetriever:
         return RetrievalResult(
             hits=hits, candidates_after_filter=len(allowed), degraded=vector is None
         )
+
+
+# Title words that do not identify a dish on their own.
+GENERIC_TITLE_WORDS = frozenset(
+    """alla al la le de di con with and in style basic simple classic traditional easy
+    quick fresh i ii iii iv v spaghetti pasta penne linguine sauce soup curry rice stew
+    cake cookie pie bread salad italian indian mexican american tuscan polish thai
+    vegetable chicken mixed sweet white black yellow red green""".split()  # noqa: SIM905
+)
+
+
+def same_dish_groups(recipes: Sequence[Recipe]) -> list[list[str]]:
+    """Groups of recipe ids whose titles share a distinctive word (SPEC 5.3).
+
+    Used as a hint to the model that these are versions of one dish that must be
+    presented separately, e.g. "Spaghetti alla Carbonara" and "Carbonara Pasta".
+    """
+    words = {r.id: set(tokenize(r.title)) - GENERIC_TITLE_WORDS for r in recipes}
+    groups: list[list[str]] = []
+    seen: set[str] = set()
+    for r in recipes:
+        if r.id in seen:
+            continue
+        group = [r.id] + [
+            o.id for o in recipes if o.id != r.id and o.id not in seen and words[r.id] & words[o.id]
+        ]
+        if len(group) > 1:
+            groups.append(group)
+            seen.update(group)
+    return groups
