@@ -172,12 +172,20 @@ _DISH_CLAUSE_RE = re.compile(
 )
 
 
+# "Is it possible to make a dessert without eggs?": an article between the clause start and
+# the exclusion means the user asks for some dish, not about this one.
+_REQUEST_MARKER_RE = re.compile(r"\b(?:a|an|any|some)\b", re.IGNORECASE)
+
+
 def parse_excluded(question: str) -> list[str]:
     found: list[str] = []
     dish_clauses = [m.span() for m in _DISH_CLAUSE_RE.finditer(question)]
     for regex in _EXCLUDE_RES:
         for m in regex.finditer(question):
-            if any(a <= m.start() < b for a, b in dish_clauses):
+            if any(
+                a <= m.start() < b and not _REQUEST_MARKER_RE.search(question, a, m.start())
+                for a, b in dish_clauses
+            ):
                 continue
             word = m.group(1).lower()
             if word in _NOT_INGREDIENTS:
