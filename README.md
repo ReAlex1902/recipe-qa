@@ -122,10 +122,22 @@ overlapping dishes (2 carbonaras, 3 marinara sauces, 2 guacamoles, 2 rice puddin
   prompt building, model fallback, API contract and invariants, rate limit, budget, cache,
   ops endpoints.
 
-**Latest production run (2026-10-10, commit `8353d72`): 15/15 golden cases, 4/4 contract
-cases, p50 1.5 s / p95 3.5 s end to end; refusals without a model call 0.19 s** (served by
-the fallback model; the primary's free quota was used up). Reports cited here are committed
-in [`evals/results/`](evals/results). Per-model runs: see the table in
+**Latest production run (2026-10-10, commit `c55d43a`, the last code change): 15/15 golden
+cases, 4/4 contract cases, p50 1.9 s / p95 3.6 s end to end; refusals without a model call
+0.2 s.** Reports cited here are committed in [`evals/results/`](evals/results).
+
+What these runs do and do not show:
+- All three production runs were answered by the first fallback, gemini-3.5-flash-lite:
+  the primary's free daily quota was used up by the per-model runs. **The primary model has
+  not been measured in production**; its only golden run is the local per-model run in
+  ADR-0002 (13/15, before the allergy and prompt fixes). Re-run `eval` after 07:00 UTC to
+  measure it.
+- To stay at 15 questions (the brief asks for 12-15), `tom-yum-time`, `tiramisu-ingredients`,
+  `guacamole` and `sushi` were replaced by cases for allergen exclusion, three marinara
+  versions, a similar dish not in the corpus and a "nut-free dessert" request. Checks of
+  factual content in the answer text are now `guanciale` (carbonara), `tomato` (marinara)
+  and `pine nut` (pesto); everything else is checked structurally (sources, refusal,
+  constraints against corpus metadata, allergy check). Per-model runs: see the table in
 [ADR-0002](docs/adr/0002-model-refusals-and-quota.md#measurements). Evals run on demand
 (GitHub Actions → `eval` → Run workflow), not on every push, because one run uses ~13 of
 the 20 free daily calls of a model.

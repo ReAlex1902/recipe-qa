@@ -38,6 +38,11 @@ prices per 1M tokens: 2.5-flash-lite $0.10 in / $0.40 out, 3.1-flash-lite $0.25 
 model (safety pre-check, empty filter result) and cache hits cost $0; the query embedding
 adds ~$0.000002.
 
+**Production run after review 3** (2026-10-10 13:28 UTC, commit `c55d43a`): **15/15
+golden, 4/4 contract**, p50 1.9 s / p95 3.6 s, fallback model, $1.84 / 1,000 at its list
+price. Report: `evals/results/2026-10-10T1328Z-production-c55d43a.json`. The primary model
+is not yet measured in production (its free quota was used up the same day).
+
 **Production run after review 2** (2026-10-10 13:10 UTC, commit `8353d72`, golden set
 with allergen exclusion, three marinara versions and a similar-dish case): **15/15 golden,
 4/4 contract**, p50 1.5 s / p95 3.5 s, again served by the fallback model.
