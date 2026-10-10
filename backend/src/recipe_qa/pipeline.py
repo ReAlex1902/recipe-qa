@@ -1,5 +1,6 @@
 """The /ask pipeline (SPEC 4): constraints -> safety -> retrieve -> filter -> LLM -> validate."""
 
+import re
 import threading
 import time
 from collections import OrderedDict
@@ -38,6 +39,28 @@ SAFETY_NOTICE = (
     "not listed, and cross-contamination is not covered. If you have an allergy, check every "
     "label and ask a medical professional."
 )
+
+# Phrases that claim an allergen is absent or that a dish is safe (SPEC 5.4.1).
+ABSENCE_CLAIM_RE = re.compile(
+    r"\b[\w]+[- ]free\b|\bsafe (?:for|to eat)\b|\ballergy[- ]friendly\b|"
+    r"\bsuitable for (?:people|someone|anyone|those) with\b|\bis safe\b|\band safe\b",
+    re.IGNORECASE,
+)
+
+
+def deterministic_allergy_answer(
+    recipes: Sequence[Recipe], groups: Sequence[str], matches: Sequence[AllergyMatch]
+) -> str:
+    names = ", ".join(g.replace("_", " ") for g in groups) or "the allergen you named"
+    lines = []
+    for r in recipes:
+        found = [m.ingredient for m in matches if m.recipe_id == r.id]
+        if found:
+            lines.append(f"{r.title} lists: " + "; ".join(f'"{f}"' for f in found) + ".")
+        else:
+            lines.append(f"The listed ingredients of {r.title} do not mention {names}.")
+    return " ".join(lines) + " See the notice below before cooking."
+
 
 # Groups where plant phrases such as "coconut milk" must not count as a match.
 _PLANT_PHRASE_GROUPS = {"dairy", "egg"}
@@ -112,6 +135,7 @@ class Trace:
     input_tokens: int = 0
     output_tokens: int = 0
     outcome: str | None = None
+    outcome_note: str | None = None
     timings_ms: dict[str, float] = field(default_factory=dict)
 
 
@@ -180,6 +204,8 @@ class Pipeline:
             trace.precheck = "safety"
             return self._refuse("safety", constraints, request_id, trace), trace
 
+        if self.budget.exhausted():
+            raise BudgetExhaustedError  # before spending a query-embedding call
         t = time.perf_counter()
         result = self.retriever.retrieve(question, constraints)
         trace.timings_ms["retrieve"] = _ms(t)
@@ -218,15 +244,19 @@ class Pipeline:
             trace.timings_ms["total"] = _ms(start)
             return response, trace
 
-        allergy_check = (
-            AllergyCheck(allergens=groups, matches=allergy_matches(cited, groups))  # type: ignore[arg-type]
-            if allergy_mode
-            else None
-        )
+        answer = gen.answer
+        allergy_check = None
+        if allergy_mode:
+            matches = allergy_matches(cited, groups)
+            allergy_check = AllergyCheck(allergens=groups, matches=matches)  # type: ignore[arg-type]
+            if ABSENCE_CLAIM_RE.search(answer):
+                # SPEC 5.4.1: never assert absence. The model did; use the server's listing.
+                trace.outcome_note = "absence_claim_replaced"
+                answer = deterministic_allergy_answer(cited, groups, matches)
         trace.outcome = "answered"
         trace.timings_ms["total"] = _ms(start)
         return AskResponse(
-            answer=gen.answer,
+            answer=answer,
             citations=[Citation(recipe_id=r.id, title=r.title, url=r.url) for r in cited],
             refused=False,
             refusal_reason=None,

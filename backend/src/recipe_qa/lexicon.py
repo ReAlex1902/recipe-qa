@@ -175,16 +175,19 @@ ALLERGENS: dict[str, tuple[str, ...]] = {
 
 # Words in a question that name an allergen group (SPEC 5.4).
 ALLERGEN_QUESTION_WORDS: dict[str, tuple[str, ...]] = {
-    "tree_nut": ("nut", "tree nut", "almond", "walnut", "cashew", "pistachio", "hazelnut"),
+    "tree_nut": (
+        "nut", "tree nut", "almond", "walnut", "cashew", "pistachio", "hazelnut", "pine nut",
+        "pecan", "macadamia",
+    ),
     "peanut": ("peanut",),
-    "dairy": ("dairy", "lactose", "milk"),
+    "dairy": ("dairy", "lactose", "milk", "cheese", "butter", "cream", "yogurt", "yoghurt"),
     "egg": ("egg",),
-    "gluten": ("gluten", "celiac", "coeliac", "wheat"),
+    "gluten": ("gluten", "celiac", "coeliac", "wheat", "flour"),
     "fish": ("fish",),
-    "shellfish": ("shellfish", "seafood", "shrimp", "prawn"),
-    "soy": ("soy", "soya"),
-    "sesame": ("sesame",),
-}
+    "shellfish": ("shellfish", "seafood", "shrimp", "prawn", "clam", "crab"),
+    "soy": ("soy", "soya", "tofu"),
+    "sesame": ("sesame", "tahini"),
+}  # fmt: skip
 
 
 # Plant-based phrases that would otherwise match an animal-product word.

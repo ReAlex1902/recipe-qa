@@ -58,6 +58,13 @@ class DailyBudget:
             self._used += 1
             return True
 
+    def exhausted(self) -> bool:
+        """True if no call is left today (checked before spending an embedding call)."""
+        with self._lock:
+            if self._today() != self._day:
+                return False
+            return self._used >= self._limit
+
     @property
     def used(self) -> int:
         return self._used

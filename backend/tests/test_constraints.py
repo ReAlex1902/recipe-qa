@@ -45,7 +45,8 @@ def test_parse_diet(question: str, diet: str | None) -> None:
     ("question", "excluded"),
     [
         ("a soup without onions", ["onion"]),
-        ("pasta with no garlic and without cream", ["garlic", "cream"]),
+        # cream is an allergen word: handled by allergy mode, not a hard filter (SPEC 5.1)
+        ("pasta with no garlic and without cream", ["garlic"]),
         ("garlic-free sauce", ["garlic"]),
         ("a curry with chicken", []),
         # allergen words go to allergy mode, not to the ingredient filter
@@ -113,8 +114,11 @@ def test_naming_an_allergen_enables_allergy_mode(question: str, groups: list[str
 
 @pytest.mark.parametrize(
     ("question", "minutes"),
-    [("something I can make within minutes", None), ("which dish takes hours?", None),
-     ("ready in an hour", 60)],
+    [
+        ("something I can make within minutes", None),
+        ("which dish takes hours?", None),
+        ("ready in an hour", 60),
+    ],
 )
 def test_durations_need_a_number(question: str, minutes: int | None) -> None:
     assert parse_constraints(question).max_total_minutes == minutes

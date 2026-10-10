@@ -25,7 +25,7 @@ from starlette.concurrency import run_in_threadpool
 from recipe_qa.config import Settings
 from recipe_qa.embeddings_file import load_vectors
 from recipe_qa.llm import GeminiEmbedder, GeminiGenerator, UpstreamError, make_client
-from recipe_qa.logging_setup import ring_buffer
+from recipe_qa.logging_setup import REQUEST_ID, ring_buffer
 from recipe_qa.models import Recipe
 from recipe_qa.pipeline import BudgetExhaustedError, Pipeline, ResponseCache
 from recipe_qa.ratelimit import DailyBudget, RateLimiter
@@ -39,9 +39,11 @@ _SAFE_REQUEST_ID = re.compile(r"^[A-Za-z0-9._-]{1,64}$")
 SECURITY_HEADERS = {
     "X-Content-Type-Options": "nosniff",
     "Referrer-Policy": "no-referrer",
+    "Strict-Transport-Security": "max-age=63072000; includeSubDomains",
     "Content-Security-Policy": (
-        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
-        "img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'"
+        "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; "
+        "connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; "
+        "frame-ancestors 'none'"
     ),
 }
 
@@ -148,8 +150,12 @@ def create_app(
         incoming = request.headers.get("x-request-id", "")
         request_id = incoming if _SAFE_REQUEST_ID.match(incoming) else uuid.uuid4().hex
         request.state.request_id = request_id
+        token = REQUEST_ID.set(request_id)
         start = time.perf_counter()
-        response = await call_next(request)
+        try:
+            response = await call_next(request)
+        finally:
+            REQUEST_ID.reset(token)
         response.headers["X-Request-ID"] = request_id
         for name, value in SECURITY_HEADERS.items():
             response.headers.setdefault(name, value)

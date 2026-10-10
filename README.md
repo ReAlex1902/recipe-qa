@@ -90,7 +90,7 @@ overlapping dishes (2 carbonaras, 3 marinara sauces, 2 guacamoles, 2 rice puddin
   JSON Schema and invariants I1–I7, prints a report, writes JSON to `evals/reports/`, and
   exits non-zero below the SPEC AC2 thresholds.
 - `evals/retrieval_eval.py` — retrieval-only ablation (BM25 / embeddings / hybrid).
-- `backend/tests` — 127 tests without network: wikitext parsing, time parsing, ingestion
+- `backend/tests` — 145 tests without network: wikitext parsing, time parsing, ingestion
   (mocked MediaWiki), constraints, lexicon, filters, BM25/RRF/hybrid and its degradation,
   prompt building, model fallback, API contract and invariants, rate limit, budget, cache,
   ops endpoints.
@@ -195,7 +195,7 @@ log size), sampled and stored with a short retention.
 
 ## Production readiness
 
-Done: spec-first contract with machine-checked invariants; eval harness; 127 offline
+Done: spec-first contract with machine-checked invariants; eval harness; 145 offline
 tests; strict typing and linting; pinned, non-root, read-only-compatible Docker image;
 CI with secret scanning and container smoke tests; deploy of tested commits only,
 idempotent and serialized; secrets only in the environment; structured logs with request

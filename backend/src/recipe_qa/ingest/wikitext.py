@@ -115,17 +115,25 @@ def parse_minutes(text: str) -> int | None:
     clean = strip_markup(re.sub(r"<br\s*/?>", "; ", text, flags=re.IGNORECASE))
     if not clean or _UNBOUNDED_RE.search(clean):
         return None
+    # "1/2 hour" -> "0.5 hour"; "1:30 hours" -> "1.5 hours"
+    clean = re.sub(r"\b(\d+)/(\d+)\b", lambda m: f"{int(m[1]) / int(m[2]):g}", clean)
+    clean = re.sub(r"\b(\d+):(\d{2})\b", lambda m: f"{int(m[1]) + int(m[2]) / 60:g}", clean)
     matches = list(_DURATION_RE.finditer(clean))
     if not matches:
         return None
-    minutes = 0.0
-    for m in matches:
+    parts: list[float] = []
+    for n, m in enumerate(matches):
         value = _to_number(m.group("num2") or m.group("num"))
         unit = m.group("unit").lower()
         if unit.startswith(("d", "w")):
             return None  # multi-day recipes are out of any time constraint we parse
-        minutes += value * 60 if unit.startswith("h") else value
-    return round(minutes)
+        part = value * 60 if unit.startswith("h") else value
+        between = clean[matches[n - 1].end() : m.start()] if n else ""
+        if parts and re.fullmatch(r"\s*(?:to|or|[-–—])\s*", between):
+            parts[-1] = max(parts[-1], part)  # "30 minutes to 1 hour": a range
+        else:
+            parts.append(part)
+    return round(sum(parts))
 
 
 def _remove_balanced(text: str, opener: str, closer: str) -> str:

@@ -19,8 +19,8 @@ jobs:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.3.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           version: "0.11.3"
       - run: uv sync --frozen
@@ -38,8 +38,8 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "22"
           cache: npm
@@ -50,19 +50,19 @@ jobs:
   secrets-scan:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@v3
+      - uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   image:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v7
-      - uses: docker/setup-buildx-action@v4
-      - uses: docker/build-push-action@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           load: true
@@ -98,16 +98,15 @@ jobs:
       group: deploy-production
       cancel-in-progress: false
     env:
-      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-      OPS_TOKEN: ${{ secrets.OPS_TOKEN }}
       GIT_SHA: ${{ github.sha }}
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: "22"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
+      # No secrets are in the environment of this step (npm install scripts run here).
       - name: build UI
         run: npm ci && npm run build
         working-directory: frontend
@@ -115,6 +114,11 @@ jobs:
         name: deploy this commit to Vercel production
         run: python3 deploy/vercel.py deploy
         env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          OPS_TOKEN: ${{ secrets.OPS_TOKEN }}
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
       - name: smoke test the live service
         run: python3 deploy/vercel.py verify
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          OPS_TOKEN: ${{ secrets.OPS_TOKEN }}

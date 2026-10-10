@@ -72,6 +72,8 @@ def check_invariants(body: dict[str, Any], headers: httpx.Headers) -> list[str]:
         r = CORPUS.get(c["recipe_id"])
         if r is None or (c["title"], c["url"]) != (r["title"], r["url"]):
             errors.append(f"I3: citation {c['recipe_id']} does not match the corpus")
+    if body["constraints"].keys() != {"max_total_minutes", "diet", "exclude_ingredients"}:
+        errors.append("I6: constraints must echo the three parsed fields")
     if body["allergy_check"] is not None and not body["safety_notice"]:
         errors.append("I5: allergy_check without safety_notice")
     if headers.get("x-request-id") != body["request_id"]:
@@ -117,6 +119,8 @@ def check_expectations(body: dict[str, Any], expect: dict[str, Any]) -> list[str
                 if any(word in line.lower() for line in r["ingredients"]):
                     errors.append(f"{rid}: contains excluded '{word}'")
 
+    if "allergy_groups" not in expect and body["allergy_check"] is not None:
+        errors.append("I4: allergy_check set on a non-allergy question")
     if "allergy_groups" in expect:
         check = body["allergy_check"] or {}
         if check.get("allergens") != expect["allergy_groups"]:
@@ -208,7 +212,10 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--base-url", default="http://localhost:8000")
     parser.add_argument("--only", nargs="*", help="run only these case ids")
-    parser.add_argument("--repeat", type=int, default=1, help="run the golden set N times")
+    parser.add_argument(
+        "--repeat", type=int, default=1,
+        help="run the golden set N times (repeats are served from the server cache)",
+    )
     parser.add_argument(
         "--delay",
         type=float,
@@ -247,8 +254,10 @@ def main() -> int:
     contract = [r for r in results if r.kind == "contract"]
     expected_refused = {c["id"]: c["expect"]["refused"] for c in cases}
     refusal_ok = [r.refused == expected_refused[r.id] for r in golden]
-    llm = [r.latency_ms for r in golden if r.input_tokens]
-    no_llm = [r.latency_ms for r in golden if not r.input_tokens]
+    # Classify by the X-LLM-Model header: "cache" hits are neither model calls nor
+    # pre-model refusals, so they are excluded from both latency groups.
+    llm = [r.latency_ms for r in golden if r.model not in (None, "none", "cache")]
+    no_llm = [r.latency_ms for r in golden if r.model == "none"]
     pass_rate = sum(r.passed for r in golden) / max(len(golden), 1)
     refusal_rate = sum(refusal_ok) / max(len(refusal_ok), 1)
     cost = cost_usd(golden)
@@ -257,6 +266,7 @@ def main() -> int:
         "base_url": args.base_url,
         "finished_at": datetime.now(UTC).isoformat(timespec="seconds"),
         "models": sorted({r.model for r in golden if r.model}),
+        "cache_hits": sum(1 for r in golden if r.model == "cache"),
         "golden_passed": f"{sum(r.passed for r in golden)}/{len(golden)}",
         "golden_pass_rate": round(pass_rate, 3),
         "refused_flag_correct_rate": round(refusal_rate, 3),

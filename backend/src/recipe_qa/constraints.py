@@ -15,18 +15,22 @@ _BOUND = (
     r"(?:under|below|less than|fewer than|within|at most|no more than|not more than|up to|"
     r"max(?:imum)?(?: of)?|in(?: under| less than)?|takes?)"
 )
+# A number is required ("within minutes" is not a limit); "an hour" counts as 1 hour.
 _DUR = (
-    r"(?P<half_an>half an? )?(?P<num>\d+(?:\.\d+)?|an?|one|two|three|four|five)?\s*"
-    r"(?P<unit>hours?|hrs?|minutes?|mins?)\b(?P<and_half>\s+and\s+a\s+half)?"
+    r"(?:(?P<half_an>half an? hour)|"
+    r"(?P<num>\d+(?:\.\d+)?|one|two|three|four|five)\s*(?P<unit>hours?|hrs?|minutes?|mins?)|"
+    r"(?P<an>an?) (?P<unit_an>hour))\b(?P<and_half>\s+and\s+a\s+half)?"
 )
 _TIME_RES = (
     re.compile(rf"\b{_BOUND}\s+{_DUR}", re.IGNORECASE),
     re.compile(rf"\b{_DUR}\s+or\s+(?:less|under|fewer)\b", re.IGNORECASE),
 )
 
-_VEGAN_RE = re.compile(r"\b(?:vegan|plant[- ]based)\b", re.IGNORECASE)
+_VEGAN_RE = re.compile(r"(?<!non-)(?<!non )\b(?:vegan|plant[- ]based)\b", re.IGNORECASE)
 _VEGETARIAN_RE = re.compile(
-    r"(?<!non-)(?<!non )\b(?:vegetarian|veggie|meatless|meat[- ]free)\b", re.IGNORECASE
+    r"(?<!non-)(?<!non )\b(?:vegetarian|veggie|meatless|meat[- ]free)\b"
+    r"|\b(?:no|without)\s+meat\b",
+    re.IGNORECASE,
 )
 
 _EXCLUDE_RES = (
@@ -61,6 +65,21 @@ _NOT_INGREDIENTS = frozenset(
         "risk",
         "problem",
         "need",
+        "idea",
+        "clue",
+        "doubt",
+        "using",
+        "use",
+        "way",
+        "rush",
+        "worries",
+        "special",
+        "equipment",
+        "experience",
+        "skill",
+        "skills",
+        "money",
+        "recipe",
     }
 )
 
@@ -88,9 +107,10 @@ _SAFETY_RES = (
 def _minutes(m: re.Match[str]) -> int:
     if m.group("half_an"):
         return 30
-    raw = (m.group("num") or "1").lower()
+    raw = (m.group("num") or m.group("an")).lower()
+    unit = (m.group("unit") or m.group("unit_an")).lower()
     value = float(_WORD_NUMBERS[raw]) if raw in _WORD_NUMBERS else float(raw)
-    if m.group("unit").lower().startswith("h"):
+    if unit.startswith("h"):
         value *= 60
         if m.group("and_half"):
             value += 30
@@ -105,6 +125,21 @@ def _singular(word: str) -> str:
     if word.endswith("s") and not word.endswith("ss"):
         return word[:-1]
     return word
+
+
+# Allergen group names (not single foods): naming one in a containment question is an
+# allergy question; "a walnut cake recipe" is not.
+_GROUP_NAMES = {
+    "tree_nut": ("nut", "tree nut"),
+    "peanut": ("peanut",),
+    "dairy": ("dairy", "lactose"),
+    "egg": ("egg",),
+    "gluten": ("gluten", "wheat"),
+    "fish": ("fish",),
+    "shellfish": ("shellfish",),
+    "soy": ("soy", "soya"),
+    "sesame": ("sesame",),
+}
 
 
 def _is_allergen_word(word: str) -> bool:
@@ -144,8 +179,19 @@ def parse_constraints(question: str) -> Constraints:
     )
 
 
+# "Does X contain nuts?", "is there egg in it?", "any dairy?" (SPEC 5.4.2)
+_CONTAINS_RE = re.compile(
+    r"\b(?:contains?|containing|is there|are there|any|has|have|with|include[sd]?)\b",
+    re.IGNORECASE,
+)
+
+
 def is_allergy_question(question: str) -> bool:
     if _ALLERGY_WORDS_RE.search(question):
+        return True
+    if _CONTAINS_RE.search(question) and any(
+        contains_any(question, words) for words in _GROUP_NAMES.values()
+    ):
         return True
     for regex in _EXCLUDE_RES:
         if any(_is_allergen_word(m.group(1)) for m in regex.finditer(question)):

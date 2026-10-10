@@ -85,8 +85,11 @@ class Generation:
 
 
 def build_user_prompt(question: str, recipes: Sequence[Recipe], allergy_mode: bool = False) -> str:
+    # Recipe text is community-edited: escape '<' so it cannot close or open a tag.
     blocks = "\n".join(
-        f'<recipe id="{r.id}">\n{r.as_prompt_text(include_free_text=not allergy_mode)}\n</recipe>'
+        f'<recipe id="{r.id}">\n'
+        f"{r.as_prompt_text(include_free_text=not allergy_mode).replace('<', '&lt;')}\n"
+        "</recipe>"
         for r in recipes
     )
     groups = same_dish_groups(recipes)

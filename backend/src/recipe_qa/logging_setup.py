@@ -1,5 +1,6 @@
 """One JSON object per log line, so the hosting log viewer can be searched by field."""
 
+import contextvars
 import json
 import logging
 import sys
@@ -23,6 +24,24 @@ class JsonFormatter(logging.Formatter):
         if record.exc_info:
             entry["exc"] = self.formatException(record.exc_info)
         return json.dumps(entry, ensure_ascii=False, default=str)
+
+
+# Set by the HTTP middleware; copied into worker threads by run_in_threadpool (SPEC I7).
+REQUEST_ID: contextvars.ContextVar[str | None] = contextvars.ContextVar("request_id", default=None)
+
+
+class RequestIdFilter(logging.Filter):
+    """Adds the current request id to every log record emitted while serving a request."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        rid = REQUEST_ID.get()
+        if rid is not None:
+            fields = getattr(record, "fields", None)
+            if isinstance(fields, dict):
+                fields.setdefault("request_id", rid)
+            else:
+                record.fields = {"request_id": rid}
+        return True
 
 
 class RingBufferHandler(logging.Handler):
@@ -56,7 +75,10 @@ def configure(level: str) -> None:
     handler = logging.StreamHandler(sys.stdout)
     handler.setFormatter(JsonFormatter())
     root = logging.getLogger()
-    root.handlers[:] = [handler, RingBufferHandler()]
+    ring = RingBufferHandler()
+    for h in (handler, ring):
+        h.addFilter(RequestIdFilter())
+    root.handlers[:] = [handler, ring]
     root.setLevel(level)
     # uvicorn's own access log duplicates our request log line
     logging.getLogger("uvicorn.access").disabled = True

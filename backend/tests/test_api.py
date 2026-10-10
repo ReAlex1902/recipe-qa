@@ -305,7 +305,7 @@ def test_budget_exhausted_before_retrieval(corpus: list[Recipe]) -> None:
 def test_log_lines_inside_a_request_carry_request_id(corpus: list[Recipe]) -> None:
     import logging
 
-    from recipe_qa.logging_setup import RingBufferHandler, RequestIdFilter
+    from recipe_qa.logging_setup import RequestIdFilter, RingBufferHandler
 
     handler = RingBufferHandler(capacity=50)
     handler.addFilter(RequestIdFilter())

@@ -180,15 +180,20 @@ The corpus is community-edited and cannot guarantee that a dish is free of an al
 1. **Never assert absence.** The service never says a recipe is "X-free" or "safe for" an
    allergy. It can say what the listed ingredients **contain**, and that the listed
    ingredients do not mention X.
-2. **Allergy mode** is on when the question mentions an allergen or allergy word
-   (`allergy`, `allergic`, `intolerance`, `celiac`, `-free` with an allergen,
-   or an allergen group name). In allergy mode:
+2. **Allergy mode** is on when the question has an allergy word (`allergy`, `allergic`,
+   `intolerance`, `celiac`), or "X-free" / "without X" / "no X" with an allergen, or a
+   containment question naming an allergen group ("Does the pesto contain nuts?",
+   "any dairy in it?"). "A walnut cake recipe" alone is not an allergy question.
+   In allergy mode:
    - `allergy_check.allergens` = allergen groups found in the question;
    - `allergy_check.matches` = every ingredient line of every cited recipe that matches the
      allergen lexicon for those groups (deterministic, server-side);
    - `safety_notice` = fixed text: the check is based only on the listed ingredients of a
      community recipe, packaged ingredients may contain the allergen, and people with an
      allergy must check labels and ask a medical professional.
+   - If the model's answer still claims absence or safety ("nut-free", "safe for",
+     "allergy-friendly", "suitable for people with"), the server replaces it with a
+     deterministic listing of the matching ingredient lines per cited recipe.
    - The model receives only the structured fields of each recipe (title, metadata,
      ingredients, steps), not the free-text description or notes: community notes contain
      unverified safety claims (Pesto I: replacing pine nuts with walnuts is "necessary for
@@ -273,6 +278,11 @@ v1.1 (2026-10-10), after the first eval runs and deployment attempts:
   repeated a wrong allergy claim from a recipe's notes.
 - §7: model fallback chain and response cache — the key's free tier allows ~20 calls per
   model per day (measured from the 429 body), see ADR-0002.
+- Code review fixes: allergy detection for containment questions; durations need a number
+  ("within minutes" is no limit); "non-vegan" is not vegan; "no meat" means vegetarian;
+  junk exclusions ("no idea") dropped; time ranges "30 minutes to 1 hour" take the upper
+  bound; server-side absence-claim guard; budget checked before the embedding call;
+  every log line of a request carries its request id; recipe text escaped in the prompt.
 - Edge case E3 was failing on two models (`out_of_corpus` instead of `out_of_domain`);
   the prompt now names general-knowledge questions as out of domain. The rule itself is
   unchanged.
