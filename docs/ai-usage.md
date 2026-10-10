@@ -47,8 +47,28 @@ Rewritten or changed after review / measurement:
 - **Deployment:** Hugging Face Spaces and Render were implemented first and both failed
   at service creation with HTTP 402 (card required). Their scripts were deleted; the
   history keeps them. Final: Vercel + `deploy/vercel.py`.
+- **External review (round 2):** allergen exclusions ("a dessert without eggs") were not
+  filtered, only flagged; fixed as hard filters plus allergy mode. Also: hyphenated
+  durations, negated diets, sub-recipe diet tags, cost reporting that depends on the
+  answering model, doc drift (deployment target, `.env.example`), deploy-script
+  environment, `/ops` rate limiting. Each fix has a failing test first.
 - **A CI slip:** one push went out with a lint error because `make lint | tail` hid the
   exit code; CI caught it and the next commit fixed it.
+
+## Pace, and what the commit timestamps mean
+
+The whole history was produced in one agent-assisted session of about 3 hours (commit
+times 13:19-16:30), not the 6-8 hours of the brief. Test-first pairs are often 1-3
+minutes apart because the agent wrote the test, I read it, it was committed, then the
+implementation followed. Some early commits are large (the wikitext parser, time parsing,
+diet lexicon and constraint parsing landed in one `feat:`). The order is real (the failing
+test is always committed before its fix), but the granularity is coarser than I would have
+by hand. I did not rewrite history to make it look slower.
+
+Where the time actually went: deciding on and failing with three hosting providers
+(HF Spaces, Render, then Vercel), measuring four models under a tight free quota, and two
+review rounds (agent code review + security audit, then an external review) whose findings
+are each a test-first commit pair.
 
 ## What the agent did not do
 

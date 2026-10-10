@@ -140,7 +140,7 @@ question ─► validate ─► parse constraints ─► safety pre-check ─►
 |---|---|---|
 | Max time | "under 30 minutes", "in less than an hour", "within 45 min", "quick" is **not** a constraint | Keep recipes with known `total_minutes ≤ N`. Recipes with unknown time are **dropped** (we cannot prove they fit). |
 | Diet | "vegetarian", "meatless", "vegan", "plant-based" | Keep recipes whose `diet` satisfies it: vegan ⊂ vegetarian. Unknown diet is dropped. |
-| Excluded ingredient | "without X", "no X", "X-free" (non-allergen X) | Drop recipes whose ingredient lines contain X (word match, simple plural). |
+| Excluded ingredient | "without X", "no X", "X-free" | Drop recipes whose ingredient lines contain X (word match, simple plural). An allergen group name ("nuts", "dairy", "eggs") drops every line of that group's lexicon; an allergen food ("cheese", "cream") drops that food. An allergen exclusion also switches on allergy mode (§5.4). "Is the pesto nut-free?" is a question about a dish, not a filter: allergy mode only. |
 
 `total_minutes` comes from the recipe's `time` field in the Wikibooks `Recipe summary`
 template. For a range ("30–60 minutes") the **upper** bound is used; parts are summed
@@ -200,10 +200,13 @@ The corpus is community-edited and cannot guarantee that a dish is free of an al
      people with nut allergies").
    - Allergen groups: `tree_nut`, `peanut`, `dairy`, `egg`, `gluten`, `fish`, `shellfish`,
      `soy`, `sesame`. Lexicon: `backend/src/recipe_qa/lexicon.py`.
-3. **Refuse with `safety`** (no model call) when the question asks for medical advice about a
-   reaction or symptoms ("I ate peanuts and my throat is swelling"), or for something that is
-   dangerous to eat or make (e.g. eating raw chicken, making poison). The model can also
-   choose `safety` for cases the pattern list misses.
+3. **Refuse with `safety`** (no model call) when the question asks for medical advice about
+   a reaction or symptoms ("I ate peanuts and my throat is swelling"), or for something that
+   is dangerous to eat or make (e.g. eating raw chicken, making poison). The model can also
+   choose `safety` for cases the pattern list misses. The pattern list is deliberately
+   broad: it also refuses some harmless questions ("Is rhubarb poisonous?", "how to avoid
+   raw chicken"). Accepted trade-off: a false refusal costs a re-phrase, a missed medical
+   emergency costs more. Tuned only with real logged questions.
 
 ### 5.5 Out of domain vs out of corpus
 
@@ -283,6 +286,10 @@ v1.1 (2026-10-10), after the first eval runs and deployment attempts:
   junk exclusions ("no idea") dropped; time ranges "30 minutes to 1 hour" take the upper
   bound; server-side absence-claim guard; budget checked before the embedding call;
   every log line of a request carries its request id; recipe text escaped in the prompt.
+- Review 2: allergen exclusions are hard filters too ("a dessert without eggs" no longer
+  suggests tiramisu); "a 30-minute dinner" is a time limit; "not vegetarian" is no diet;
+  an ingredient line that is another recipe ("1 recipe Flaky Pie Crust") makes the diet
+  unknown; `/ops/*` rate limited.
 - Edge case E3 was failing on two models (`out_of_corpus` instead of `out_of_domain`);
   the prompt now names general-knowledge questions as out of domain. The rule itself is
   unchanged.

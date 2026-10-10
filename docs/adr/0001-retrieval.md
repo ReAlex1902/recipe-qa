@@ -28,7 +28,7 @@ Three decisions: (1) the retrieval unit, (2) how to rank, (3) how to apply const
 |---|---|---|
 | **A. One recipe = one unit** (chosen) | Citations are recipe-level anyway; the model always sees the ingredients *and* the steps together, so "how do I make X" and "does X contain Y" are answerable from one unit; no reassembly logic | A 7k-char recipe costs ~1.8k tokens in the prompt |
 | B. Separate chunks for ingredients, steps, notes | Finer ranking | The model can get the steps without the ingredient list (bad for allergy questions); needs reassembly to cite; no gain at this corpus size |
-| C. No retrieval: whole corpus in every prompt | Simplest, no recall risk | 23.5k input tokens per question: **$2.35 per 1,000 questions** with gemini-2.5-flash-lite vs **$0.34** measured with top-5 retrieval (7× more), slower, and constraints would again be the model's job. Breaks completely at a few hundred recipes |
+| C. No retrieval: whole corpus in every prompt | Simplest, no recall risk | 23.5k input tokens per question: **$2.35 per 1,000 questions** with gemini-2.5-flash-lite vs **$0.42** measured with top-5 retrieval (5.6× more), slower, and constraints would again be the model's job. Breaks completely at a few hundred recipes |
 
 **Ranking**
 
@@ -67,9 +67,19 @@ Index in process memory (numpy), built at startup: corpus embedding takes 1.3 s.
 
 - p50 retrieval ≈ 300 ms, dominated by the query embedding call (the LLM call is
   ≈ 1.3 s, so retrieval is ~20% of the latency budget).
-- Startup embeds 52 documents. On the free Gemini tier this counts as 52 requests against
-  the per-minute embedding quota; if it fails, the service runs on BM25 and retries the
-  corpus embedding at most once a minute (`HybridRetriever._ensure_doc_vectors`).
+- Corpus embeddings are precomputed (`make embed`) and committed next to the corpus,
+  checked against a corpus fingerprint at startup, so a cold start makes no embedding call.
+  If they are missing or stale, startup embeds the 52 documents (52 requests of the free
+  per-minute quota); if that fails, the service runs on BM25 and retries at most once a
+  minute (`HybridRetriever._ensure_doc_vectors`).
+- **No relevance threshold.** The vector ranking always returns the top 5, so an
+  off-topic question ("capital of France?") still costs one model call that then refuses
+  `out_of_domain`. A score threshold would save that call but needs calibration data we do
+  not have (52 recipes, 15 golden questions) and would turn borderline in-domain questions
+  into false `out_of_corpus` refusals with no model check. We keep the decision with the
+  model and the cheap deterministic refusals (safety pre-check, empty filter result).
+  Revisit with a few hundred logged real questions: set the threshold where BM25 = 0 and
+  cosine < τ never produced an answer.
 - No vector database to run or pay for.
 
 ## This decision is invalid when

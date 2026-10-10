@@ -27,7 +27,8 @@ The human author owns every decision; the agent proposes, the author accepts or 
 - Backend: Python 3.12, FastAPI, pydantic v2, `uv` for dependencies (`uv.lock` is committed).
 - Frontend: one page, TypeScript, Vite, no framework.
 - LLM and embeddings: Google Gemini through the `google-genai` SDK.
-- Deployment: Docker image on Hugging Face Spaces, deployed by GitHub Actions.
+- Deployment: Vercel (Python function) via `deploy/vercel.py` from GitHub Actions; the
+  Docker image is the reproducible build for local runs and CI (see ADR-0003).
 
 ## Commands
 - `make test` — backend unit tests + lint + type check

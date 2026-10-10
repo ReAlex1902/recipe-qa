@@ -45,6 +45,11 @@ model's daily free quota was already used, so every answer came from the first f
 gemini-3.5-flash-lite (≈ $1.44 / 1,000 at its list price) — the fallback chain working as
 designed.
 
+**How much these runs prove:** one run per model, 15 questions each, temperature 0.
+13/15 vs 14/15 is within noise; the runs separate models on latency and price (large,
+stable differences), not on quality. The primary was chosen on price and latency within
+the quality bar, and the chain falls back to the model with the best observed pass rate.
+
 What the failures in the per-model runs were:
 - 2.5-flash-lite: one free-tier quota error (HTTP 503 to the client) and one allergy answer
   that repeated a wrong claim from the Pesto recipe's notes ("necessary for people with nut
@@ -91,8 +96,12 @@ What the failures in the per-model runs were:
 
 ## Consequences
 
-- Cost at list price: **≈ $0.00042 per question, ≈ $0.42 per 1,000** (≈ 3.3k input +
-  0.2k output tokens). Free-tier capacity: ~80 model calls per day before the chain is
+- Cost at list price **depends on which model in the chain answered**: ≈ $0.42 per 1,000
+  questions on the primary (≈ 3.3k input + 0.2k output tokens), ≈ $1.44-1.52 per 1,000 on
+  the first fallback, which is above the SPEC target of $1. Every answer reports its model
+  in `X-LLM-Model` and the logs, so the real cost is measurable per request. The production
+  eval run on 2026-10-10 was served entirely by the fallback because the primary's free
+  quota was used up; on a paid key that would not happen. Free-tier capacity: ~80 model calls per day before the chain is
   exhausted, then 503 `upstream_unavailable` until the quota resets (07:00 UTC).
 - A fallback answer may come from a different model than the primary; the model used is
   in the logs and in the `X-LLM-Model` header.

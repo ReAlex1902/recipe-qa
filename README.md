@@ -179,12 +179,17 @@ release are in its Actions run.
 | | Value | Source |
 |---|---|---|
 | Tokens per question that reaches the model | ≈ 3.3k in, 0.2k out | eval reports |
-| Cost per question (gemini-2.5-flash-lite list price) | **≈ $0.00042** | 3,343 × $0.10/M + 213 × $0.40/M |
-| Cost per 1,000 questions | **≈ $0.42** (+ $0.002 embeddings); refusals before the model and cache hits: $0 | |
-| Cost today | $0 — free tier key, free hosting | |
+| Cost per question, primary model (gemini-2.5-flash-lite list price) | **≈ $0.00042** | 3,343 × $0.10/M + 213 × $0.40/M |
+| Cost per 1,000 questions, primary model | **≈ $0.42** (+ $0.002 embeddings); refusals before the model and cache hits: $0 | |
+| Cost per 1,000 questions, first fallback (gemini-3.5-flash-lite) | **≈ $1.44**, above the SPEC target of $1 | production eval report |
+| Cost today | $0: free-tier key, free hosting | |
 | Latency, model questions (local, warm) | p50 1.3 s, p95 2.5 s | eval, 2.5-flash-lite |
 | Latency, refusals without model | p50 4 ms | eval |
 | Stage split | constraints + BM25 < 0.1 ms, query embedding ~300 ms, LLM ~1.0–2.5 s | logs (`timings_ms`) |
+
+Actual cost depends on which model in the chain answered (header `X-LLM-Model`, logged per
+request). The production eval run was served by the fallback, because the primary's free
+daily quota was already used; on a paid key the primary serves everything.
 
 **Models and why:** `gemini-2.5-flash-lite` is primary — cheapest and fastest of the four
 measured and the only one well inside the $1/1,000 target. On a quota error the service
@@ -248,5 +253,7 @@ nosniff); graceful degradation (BM25 fallback, model fallback chain, retries).
 ## Scope cut on purpose
 
 No conversation history, no streaming, no user accounts, no admin UI, no multilingual
-support, no vector database, no UI framework or styling work. The corpus is fixed per
-deployment (rebuilding it is a reviewed commit).
+support, no vector database, no UI framework. The corpus is fixed per deployment
+(rebuilding it is a reviewed commit). The UI got one design pass only after the core was
+complete, deployed and evaluated (assignment: extras only on a finished core); it changed
+markup and CSS, not the API contract.
