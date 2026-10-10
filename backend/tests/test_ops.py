@@ -1,0 +1,74 @@
+"""Ops endpoints: container status and recent logs for reviewers (README, Deployment)."""
+
+import logging
+
+import pytest
+from fastapi.testclient import TestClient
+from pydantic import SecretStr
+
+from recipe_qa.api import create_app
+from recipe_qa.config import Settings
+from recipe_qa.logging_setup import RingBufferHandler
+from recipe_qa.models import Recipe
+from recipe_qa.pipeline import Pipeline
+from recipe_qa.ratelimit import DailyBudget
+from recipe_qa.retrieval import HybridRetriever
+
+from .conftest import FakeEmbedder
+from .test_api import ScriptedGenerator
+
+TOKEN = "s3cret-ops-token"
+
+
+def _client(corpus: list[Recipe], ops_token: str | None) -> TestClient:
+    settings = Settings(
+        google_api_key=SecretStr("test"),
+        ops_token=SecretStr(ops_token) if ops_token else None,
+    )
+    pipeline = Pipeline(
+        retriever=HybridRetriever(corpus, FakeEmbedder()),
+        generator=ScriptedGenerator(),
+        budget=DailyBudget(5),
+    )
+    return TestClient(create_app(settings, pipeline=pipeline))
+
+
+@pytest.mark.parametrize("path", ["/ops/status", "/ops/logs"])
+def test_ops_requires_token(small_corpus: list[Recipe], path: str) -> None:
+    client = _client(small_corpus, TOKEN)
+    assert client.get(path).status_code == 401
+    assert client.get(path, headers={"Authorization": "Bearer wrong"}).status_code == 401
+    assert client.get(path, headers={"Authorization": f"Bearer {TOKEN}"}).status_code == 200
+
+
+@pytest.mark.parametrize("path", ["/ops/status", "/ops/logs"])
+def test_ops_disabled_without_configured_token(small_corpus: list[Recipe], path: str) -> None:
+    client = _client(small_corpus, None)
+    assert client.get(path, headers={"Authorization": "Bearer "}).status_code == 404
+
+
+def test_ops_status_reports_container_and_service_state(small_corpus: list[Recipe]) -> None:
+    client = _client(small_corpus, TOKEN)
+    client.post("/ask", json={"question": "carbonara"})
+    body = client.get("/ops/status", headers={"Authorization": f"Bearer {TOKEN}"}).json()
+    assert body["corpus_size"] == len(small_corpus)
+    assert body["embeddings_ready"] is True
+    assert body["llm_budget"] == {"used": 1, "limit": 5}
+    assert body["process"]["memory_rss_mb"] > 0
+    assert body["process"]["uptime_s"] >= 0
+    assert {"version", "instance", "cache_entries"} <= body.keys()
+
+
+def test_ops_logs_returns_recent_json_lines(small_corpus: list[Recipe]) -> None:
+    handler = RingBufferHandler(capacity=3)
+    logging.getLogger().addHandler(handler)
+    try:
+        client = _client(small_corpus, TOKEN)
+        for n in range(5):
+            logging.getLogger("recipe_qa").warning("line %d", n)
+        body = client.get(
+            "/ops/logs?limit=2", headers={"Authorization": f"Bearer {TOKEN}"}
+        ).json()
+    finally:
+        logging.getLogger().removeHandler(handler)
+    assert [e["msg"] for e in body["lines"]] == ["line 3", "line 4"]
