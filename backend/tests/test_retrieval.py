@@ -205,7 +205,9 @@ def test_sub_recipe_line_fails_any_exclusion() -> None:
     ],
 )
 def test_food_exclusion_covers_its_family(word: str, line: str) -> None:
-    assert not satisfies(make_recipe("x", ingredients=[line]), Constraints(exclude_ingredients=[word]))
+    assert not satisfies(
+        make_recipe("x", ingredients=[line]), Constraints(exclude_ingredients=[word])
+    )
 
 
 def test_dairy_food_exclusion_ignores_plant_milks() -> None:

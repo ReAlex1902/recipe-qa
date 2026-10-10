@@ -138,9 +138,9 @@ question ─► validate ─► parse constraints ─► safety pre-check ─►
 
 | Constraint | Detected from (examples) | Filter rule |
 |---|---|---|
-| Max time | "under 30 minutes", "in less than an hour", "within 45 min", "quick" is **not** a constraint | Keep recipes with known `total_minutes ≤ N`. Recipes with unknown time are **dropped** (we cannot prove they fit). |
+| Max time | "under 30 minutes", "in less than an hour", "within 45 min", "a 30-minute dinner", "in 1-2 hours" (upper bound); "quick" and "within minutes" are **not** constraints | Keep recipes with known `total_minutes ≤ N`. Recipes with unknown time are **dropped** (we cannot prove they fit). |
 | Diet | "vegetarian", "meatless", "vegan", "plant-based" | Keep recipes whose `diet` satisfies it: vegan ⊂ vegetarian. Unknown diet is dropped. |
-| Excluded ingredient | "without X", "no X", "X-free" | Drop recipes whose ingredient lines contain X (word match, simple plural). An allergen group name ("nuts", "dairy", "eggs") drops every line of that group's lexicon; an allergen food ("cheese", "cream") drops that food. An allergen exclusion also switches on allergy mode (§5.4). "Is the pesto nut-free?" is a question about a dish, not a filter: allergy mode only. A recipe with an ingredient line that is another recipe ("1 recipe Flaky Pie Crust") fails every exclusion. |
+| Excluded ingredient | "without X", "no X", "X-free" | Drop recipes whose ingredient lines contain X (word match, simple plural). An allergen group name ("nuts", "dairy", "eggs") drops every line of that group's lexicon; a food family word drops the family ("cheese" also drops paneer, Parmigiano, mascarpone; "milk" also buttermilk; "butter" also ghee); any other word drops itself. An allergen exclusion also switches on allergy mode (§5.4). A clause that asks about one dish ("is the / is it / are these / does this ...": "Is the pesto nut-free?", "Is the carbonara made without eggs?") is not a filter: allergy mode only, so the dish can still be answered about. "Is there a nut-free dessert?" is a filter. A recipe with a quantified sub-recipe line ("1 recipe Flaky Pie Crust") fails every exclusion. |
 
 `total_minutes` comes from the recipe's `time` field in the Wikibooks `Recipe summary`
 template. For a range ("30–60 minutes") the **upper** bound is used; parts are summed
@@ -182,8 +182,9 @@ The corpus is community-edited and cannot guarantee that a dish is free of an al
    ingredients do not mention X.
 2. **Allergy mode** is on when the question has an allergy word (`allergy`, `allergic`,
    `intolerance`, `celiac`), or "X-free" / "without X" / "no X" with an allergen, or a
-   containment question naming an allergen group ("Does the pesto contain nuts?",
-   "any dairy in it?"). "A walnut cake recipe" alone is not an allergy question.
+   containment question naming an allergen ("Does the pesto contain nuts?", "Does the
+   naan have any butter?", "Is there any egg in it?"). A request is not an allergy
+   question: "a walnut cake recipe", "Any fish recipes?", "something with fish".
    In allergy mode:
    - `allergy_check.allergens` = allergen groups found in the question;
    - `allergy_check.matches` = every ingredient line of every cited recipe that matches the
@@ -290,6 +291,10 @@ v1.1 (2026-10-10), after the first eval runs and deployment attempts:
   suggests tiramisu); "a 30-minute dinner" is a time limit; "not vegetarian" is no diet;
   an ingredient line that is another recipe ("1 recipe Flaky Pie Crust") makes the diet
   unknown; `/ops/*` rate limited.
+- Review 3: dish-question clauses replace the "starts with is/are" rule ("Is there a
+  nut-free dessert?" filters again); food families for cheese, milk, cream, butter,
+  yogurt, flour, onion; a bare "any" no longer switches on allergy mode; time ranges in
+  questions; sub-recipe lines need a quantity; the eval checks exclusions with the lexicon.
 - Edge case E3 was failing on two models (`out_of_corpus` instead of `out_of_domain`);
   the prompt now names general-knowledge questions as out of domain. The rule itself is
   unchanged.

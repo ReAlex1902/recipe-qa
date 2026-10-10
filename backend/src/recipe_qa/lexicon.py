@@ -209,7 +209,7 @@ PLANT_PHRASE_GROUPS = frozenset({"dairy", "egg"})
 
 # An ingredient line that is another recipe ("1 recipe Flaky Pie Crust") cannot be
 # checked against the lexicon, so the diet of the whole recipe is unknown.
-_SUB_RECIPE = re.compile(r"\brecipes?\b", re.IGNORECASE)
+_SUB_RECIPE = re.compile(r"^\s*(?:\d+(?:[./]\d+)?|[½¼¾⅓⅔]|an?|one|two)\s+recipes?\b", re.IGNORECASE)
 
 # Plant-based phrases that would otherwise match an animal-product word.
 PLANT_PHRASES = re.compile(
@@ -256,10 +256,34 @@ def has_sub_recipe(ingredients: Iterable[str]) -> bool:
     return any(_SUB_RECIPE.search(i) for i in ingredients)
 
 
+# Food words that name a family: "without cheese" must also drop paneer and Parmigiano.
+# Conservative on purpose (a false match drops a recipe, a miss serves a wrong one).
+FOOD_FAMILIES: dict[str, tuple[str, ...]] = {
+    "cheese": (
+        "cheese", "parmesan", "parmigiano", "pecorino", "mozzarella", "ricotta", "mascarpone",
+        "paneer", "feta", "cheddar", "gruyere", "gruyère", "halloumi", "gorgonzola",
+        "provolone", "fontina", "asiago", "grana padano", "queso", "cotija",
+    ),
+    "milk": ("milk", "buttermilk", "condensed milk", "evaporated milk", "khoa", "khoya"),
+    "cream": (
+        "cream", "sour cream", "creme fraiche", "crème fraîche", "mascarpone", "half-and-half",
+    ),
+    "butter": ("butter", "ghee"),
+    "yogurt": ("yogurt", "yoghurt", "curd", "dahi"),
+    "flour": ("flour", "maida", "atta", "semolina"),
+    "onion": ("onion", "shallot", "scallion", "spring onion", "leek"),
+}  # fmt: skip
+
+
 def exclusion_terms(word: str) -> tuple[tuple[str, ...], bool]:
-    """Lexicon terms for an excluded word, and whether plant phrases are ignored."""
+    """Lexicon terms for an excluded word, and whether plant phrases are ignored.
+
+    An allergen group name ("nuts", "dairy") expands to the group; a food family word
+    ("cheese", "milk") to its family; any other word matches itself.
+    """
     for group, names in ALLERGEN_GROUP_NAMES.items():
         if word in names:
             return ALLERGENS[group], group in PLANT_PHRASE_GROUPS
-    in_plant_group = any(word in ALLERGENS[g] for g in PLANT_PHRASE_GROUPS)
-    return (word,), in_plant_group
+    terms = FOOD_FAMILIES.get(word, (word,))
+    in_plant_group = any(t in ALLERGENS[g] for t in terms for g in PLANT_PHRASE_GROUPS)
+    return terms, in_plant_group

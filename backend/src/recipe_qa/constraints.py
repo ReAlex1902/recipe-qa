@@ -18,6 +18,7 @@ _BOUND = (
 # A number is required ("within minutes" is not a limit); "an hour" counts as 1 hour.
 _DUR = (
     r"(?:(?P<half_an>half an? hour)|"
+    r"(?:\d+(?:\.\d+)?\s*(?:-|to)\s*)?"  # a range: the upper bound is the limit
     r"(?P<num>\d+(?:\.\d+)?|one|two|three|four|five)[\s-]*(?P<unit>hours?|hrs?|minutes?|mins?)|"
     r"(?P<an>an?) (?P<unit_an>hour))\b(?P<and_half>\s+and\s+a\s+half)?"
 )
@@ -163,16 +164,21 @@ def parse_diet(question: str) -> Diet | None:
     return None
 
 
-# "Is the pesto nut-free?" asks about a dish; it is not a request to filter it out.
-_ASKS_IF_FREE_RE = re.compile(r"^\s*(?:is|are)\b[^?]*\b[a-z]+[- ]free\b", re.IGNORECASE)
+# A clause that asks about one dish ("is the pesto nut-free?", "is it ...", "does this
+# contain ...", "is the carbonara made without eggs?") is not a request to filter that dish
+# out. "Is there a nut-free dessert?" has no such determiner and stays a filter.
+_DISH_CLAUSE_RE = re.compile(
+    r"\b(?:is|are|does|do)\s+(?:the|this|that|it|these|those)\b[^?.;,]*", re.IGNORECASE
+)
 
 
 def parse_excluded(question: str) -> list[str]:
     found: list[str] = []
-    for n, regex in enumerate(_EXCLUDE_RES):
-        if n == 1 and _ASKS_IF_FREE_RE.search(question):
-            continue
+    dish_clauses = [m.span() for m in _DISH_CLAUSE_RE.finditer(question)]
+    for regex in _EXCLUDE_RES:
         for m in regex.finditer(question):
+            if any(a <= m.start() < b for a, b in dish_clauses):
+                continue
             word = m.group(1).lower()
             if word in _NOT_INGREDIENTS:
                 continue
@@ -190,8 +196,12 @@ def parse_constraints(question: str) -> Constraints:
 
 
 # "Does X contain nuts?", "is there egg in it?", "any dairy?" (SPEC 5.4.2)
+# Containment questions: "does it contain nuts?", "does the naan have any butter?",
+# "is there any egg in it?". A bare "any" ("any fish recipes?") is a request, not this.
 _CONTAINS_RE = re.compile(
-    r"\b(?:contains?|containing|include[sd]?|including|any|ha(?:s|ve)\s+(?:any\s+)?)\b",
+    r"\b(?:contains?|containing|include[sd]?|including)\b"
+    r"|\b(?:does|do|did)\b[^?.;]*\bha(?:s|ve)\b"
+    r"|\bany\b[^?.;]*\bin\s+(?:it|this|that|the|them|these|those)\b",
     re.IGNORECASE,
 )
 

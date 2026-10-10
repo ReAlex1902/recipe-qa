@@ -23,6 +23,10 @@ import httpx
 import jsonschema
 import yaml
 
+# The word lists (data), not the filter code: the check uses the same lexicon the service
+# promises to honour, so "without eggs" also catches yolk and custard lines.
+from recipe_qa.lexicon import exclusion_terms, matching_lines
+
 ROOT = Path(__file__).resolve().parents[1]
 EVALS = ROOT / "evals"
 SCHEMA = json.loads((EVALS / "response.schema.json").read_text())
@@ -116,8 +120,10 @@ def check_expectations(body: dict[str, Any], expect: dict[str, Any]) -> list[str
             if "diet" in want and r["diet"] not in DIET_OK[want["diet"]]:
                 errors.append(f"{rid}: diet={r['diet']} breaks constraint")
             for word in want.get("exclude_ingredients", []):
-                if any(word in line.lower() for line in r["ingredients"]):
-                    errors.append(f"{rid}: contains excluded '{word}'")
+                terms, ignore_plant = exclusion_terms(word)
+                hits = matching_lines(r["ingredients"], terms, ignore_plant_phrases=ignore_plant)
+                if hits:
+                    errors.append(f"{rid}: contains excluded '{word}': {hits[0]}")
 
     if "allergy_groups" not in expect and body["allergy_check"] is not None:
         errors.append("I4: allergy_check set on a non-allergy question")
