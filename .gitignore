@@ -1,0 +1,26 @@
+# secrets
+.env
+.env.*
+!.env.example
+
+# assignment brief (confidential, not part of the deliverable)
+*.pdf
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# node
+node_modules/
+frontend/dist/
+
+# eval output
+evals/reports/
+
+.DS_Store
