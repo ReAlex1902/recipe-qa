@@ -191,3 +191,23 @@ def test_sub_recipe_line_fails_any_exclusion() -> None:
     pie = make_recipe("pie", ingredients=["1 recipe Flaky Pie Crust", "4 cups rhubarb"])
     assert not satisfies(pie, Constraints(exclude_ingredients=["egg"]))
     assert satisfies(pie, Constraints())
+
+
+@pytest.mark.parametrize(
+    ("word", "line"),
+    [
+        ("cheese", "200 g paneer"),
+        ("cheese", "½ cup Parmigiano-Reggiano"),
+        ("cheese", "250 g mascarpone"),
+        ("milk", "1 cup buttermilk"),
+        ("cream", "2 tbsp sour cream"),
+        ("butter", "2 tbsp ghee"),
+    ],
+)
+def test_food_exclusion_covers_its_family(word: str, line: str) -> None:
+    assert not satisfies(make_recipe("x", ingredients=[line]), Constraints(exclude_ingredients=[word]))
+
+
+def test_dairy_food_exclusion_ignores_plant_milks() -> None:
+    no_milk = Constraints(exclude_ingredients=["milk"])
+    assert satisfies(make_recipe("x", ingredients=["1 can coconut milk"]), no_milk)

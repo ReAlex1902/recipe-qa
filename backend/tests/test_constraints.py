@@ -176,3 +176,48 @@ def test_allergen_exclusion_also_enables_allergy_mode() -> None:
 
 def test_sub_recipe_reference_makes_diet_unknown() -> None:
     assert diet_from(["Vegan recipes"], ["1 recipe Flaky Pie Crust", "4 cups rhubarb"]) is None
+
+
+# Review 3 (2026-10-10)
+@pytest.mark.parametrize(
+    ("question", "excluded"),
+    [
+        ("Is there a nut-free dessert?", ["nut"]),
+        ("Are there any dairy-free soups?", ["dairy"]),
+        ("Is the pesto nut-free?", []),
+        ("Can I eat the pesto, is it nut-free?", []),
+        ("Is the carbonara made without eggs?", []),
+        ("Are these churros dairy-free?", []),
+        ("Is there a soup without onions?", ["onion"]),
+    ],
+)
+def test_question_about_a_dish_is_not_a_filter(question: str, excluded: list[str]) -> None:
+    assert parse_constraints(question).exclude_ingredients == excluded
+
+
+@pytest.mark.parametrize(
+    "question", ["Any fish recipes?", "Any quick pasta with cheese?", "Do you have any curry?"]
+)
+def test_any_alone_is_not_an_allergy_question(question: str) -> None:
+    assert allergens_in_question(question) == []
+
+
+@pytest.mark.parametrize(
+    ("question", "groups"),
+    [("Is there any egg in it?", ["egg"]), ("Does the naan have any butter?", ["dairy"])],
+)
+def test_containment_questions_still_enable_allergy_mode(question: str, groups: list[str]) -> None:
+    assert allergens_in_question(question) == groups
+
+
+@pytest.mark.parametrize(
+    ("question", "minutes"),
+    [("dinner in 1-2 hours", 120), ("a soup in 20 to 30 minutes", 30)],
+)
+def test_time_ranges_in_questions_use_the_upper_bound(question: str, minutes: int) -> None:
+    assert parse_constraints(question).max_total_minutes == minutes
+
+
+def test_sub_recipe_detection_needs_a_quantity() -> None:
+    assert diet_from(["Vegan recipes"], ["rice (see recipe note)"]) == "vegan"
+    assert diet_from(["Vegan recipes"], ["1 recipe Flaky Pie Crust"]) is None
