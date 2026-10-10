@@ -28,8 +28,13 @@ class Recipe(BaseModel):
     steps: list[str]
     notes: str
 
-    def as_prompt_text(self) -> str:
-        """Plain-text form given to the model and to the lexical index."""
+    def as_prompt_text(self, include_free_text: bool = True) -> str:
+        """Plain-text form given to the model and the embedder.
+
+        `include_free_text=False` drops the description and notes: in allergy mode the model
+        sees only the structured lists, because free text holds unverified safety claims
+        (SPEC 5.4).
+        """
         parts = [f"Title: {self.title}"]
         if self.cuisines:
             parts.append(f"Cuisine: {', '.join(self.cuisines)}")
@@ -38,11 +43,11 @@ class Recipe(BaseModel):
         parts.append(f"Total time: {self.time_text or 'not stated'}")
         parts.append(f"Servings: {self.servings or 'not stated'}")
         parts.append(f"Diet: {self.diet or 'not tagged'}")
-        if self.intro:
+        if self.intro and include_free_text:
             parts.append(f"Description: {self.intro}")
         parts.append("Ingredients:\n" + "\n".join(f"- {i}" for i in self.ingredients))
         parts.append("Steps:\n" + "\n".join(f"{n}. {s}" for n, s in enumerate(self.steps, 1)))
-        if self.notes:
+        if self.notes and include_free_text:
             parts.append(f"Notes: {self.notes}")
         return "\n".join(parts)
 

@@ -1,5 +1,6 @@
 """Gemini adapters: answer generation with structured output, and embeddings."""
 
+import functools
 import json
 import logging
 import time
@@ -81,8 +82,11 @@ class Generation:
     model: str
 
 
-def build_user_prompt(question: str, recipes: Sequence[Recipe]) -> str:
-    blocks = "\n".join(f'<recipe id="{r.id}">\n{r.as_prompt_text()}\n</recipe>' for r in recipes)
+def build_user_prompt(question: str, recipes: Sequence[Recipe], allergy_mode: bool = False) -> str:
+    blocks = "\n".join(
+        f'<recipe id="{r.id}">\n{r.as_prompt_text(include_free_text=not allergy_mode)}\n</recipe>'
+        for r in recipes
+    )
     groups = same_dish_groups(recipes)
     same_dish = "\n".join(", ".join(g) for g in groups) or "none"
     # JSON-encode and escape '<' so the question cannot open or close a tag.
@@ -93,42 +97,94 @@ def build_user_prompt(question: str, recipes: Sequence[Recipe]) -> str:
     )
 
 
-def _retry[T](call: Callable[[], T], what: str) -> T:
+def _is_quota_error(exc: Exception) -> bool:
+    return isinstance(exc, errors.APIError) and exc.code == 429
+
+
+def _cooldown_s(exc: errors.APIError, default: float = 60.0) -> float:
+    """Seconds to skip a model after a quota error, from the error's RetryInfo."""
+    details = exc.details if isinstance(exc.details, dict) else {}
+    for item in details.get("error", {}).get("details", []):
+        delay = str(item.get("retryDelay", ""))
+        if delay.endswith("s"):
+            try:
+                return float(delay[:-1])
+            except ValueError:
+                pass
+    return default
+
+
+def _retry[T](call: Callable[[], T], what: str, delay_s: float = 0.5) -> T:
+    """Retry transient failures. Quota errors (429) are raised at once to the caller."""
     for attempt in range(1, MAX_ATTEMPTS + 1):
         try:
             return call()
-        except errors.APIError as exc:
-            retryable = exc.code in RETRYABLE_STATUS
+        except Exception as exc:
+            status = exc.code if isinstance(exc, errors.APIError) else None
             log.warning(
                 "gemini call failed",
-                extra={"fields": {"what": what, "attempt": attempt, "status": exc.code}},
+                extra={
+                    "fields": {
+                        "what": what,
+                        "attempt": attempt,
+                        "status": status,
+                        "error": type(exc).__name__,
+                    }
+                },
             )
-            if not retryable or attempt == MAX_ATTEMPTS:
-                raise UpstreamError(f"{what} failed: {exc.code}") from exc
-        except Exception as exc:  # network errors, timeouts
-            log.warning(
-                "gemini call failed",
-                extra={"fields": {"what": what, "attempt": attempt, "error": type(exc).__name__}},
+            transient = status in RETRYABLE_STATUS - {429} or (
+                status is None and not isinstance(exc, UpstreamError)
             )
-            if attempt == MAX_ATTEMPTS:
-                raise UpstreamError(f"{what} failed: {type(exc).__name__}") from exc
-        time.sleep(0.5 * 2 ** (attempt - 1))
+            if _is_quota_error(exc) or not transient or attempt == MAX_ATTEMPTS:
+                raise
+        time.sleep(delay_s * 2 ** (attempt - 1))
     raise AssertionError("unreachable")
 
 
 class GeminiGenerator:
+    """Answer generation with a model fallback chain (ADR-0002).
+
+    Models are tried in order. A model that returns a quota error is skipped for the
+    cooldown the API asks for; free-tier keys have small per-model daily quotas.
+    """
+
     def __init__(
         self,
         client: genai.Client,
-        model: str,
+        models: Sequence[str],
         *,
         temperature: float = 0.0,
         max_output_tokens: int = 1024,
+        retry_delay_s: float = 0.5,
+        clock: Callable[[], float] = time.monotonic,
     ) -> None:
+        if not models:
+            raise ValueError("at least one model is required")
         self._client = client
-        self._model = model
+        self._models = list(models)
         self._temperature = temperature
         self._max_output_tokens = max_output_tokens
+        self._retry_delay_s = retry_delay_s
+        self._clock = clock
+        self._skip_until: dict[str, float] = {}
+
+    def _call(self, model: str, prompt: str, config: types.GenerateContentConfig) -> Generation:
+        resp = self._client.models.generate_content(model=model, contents=prompt, config=config)
+        try:
+            out = ModelOutput.model_validate_json(resp.text or "")
+        except ValidationError as exc:
+            raise UpstreamError(f"{model} returned invalid JSON") from exc
+        usage = resp.usage_metadata
+        return Generation(
+            decision=out.decision,
+            answer=out.answer.strip(),
+            recipe_ids=out.recipe_ids,
+            input_tokens=(usage.prompt_token_count or 0) if usage else 0,
+            output_tokens=((usage.candidates_token_count or 0) + (usage.thoughts_token_count or 0))
+            if usage
+            else 0,
+            model=resp.model_version or model,
+        )
 
     def generate(
         self,
@@ -148,31 +204,26 @@ class GeminiGenerator:
             response_mime_type="application/json",
             response_schema=ModelOutput,
         )
-        prompt = build_user_prompt(question, recipes)
-
-        def call() -> Generation:
-            resp = self._client.models.generate_content(
-                model=self._model, contents=prompt, config=config
-            )
+        prompt = build_user_prompt(question, recipes, allergy_mode)
+        last_error: Exception | None = None
+        for model in self._models:
+            if self._skip_until.get(model, 0.0) > self._clock():
+                continue
             try:
-                out = ModelOutput.model_validate_json(resp.text or "")
-            except ValidationError as exc:
-                raise UpstreamError("model returned invalid JSON") from exc
-            usage = resp.usage_metadata
-            return Generation(
-                decision=out.decision,
-                answer=out.answer.strip(),
-                recipe_ids=out.recipe_ids,
-                input_tokens=(usage.prompt_token_count or 0) if usage else 0,
-                output_tokens=(
-                    (usage.candidates_token_count or 0) + (usage.thoughts_token_count or 0)
-                )
-                if usage
-                else 0,
-                model=resp.model_version or self._model,
-            )
-
-        return _retry(call, "generate")
+                call = functools.partial(self._call, model, prompt, config)
+                return _retry(call, model, self._retry_delay_s)
+            except errors.APIError as exc:
+                last_error = exc
+                if _is_quota_error(exc):
+                    cooldown = _cooldown_s(exc)
+                    self._skip_until[model] = self._clock() + cooldown
+                    log.warning(
+                        "model quota exhausted, falling back",
+                        extra={"fields": {"model": model, "cooldown_s": cooldown}},
+                    )
+            except Exception as exc:
+                last_error = exc
+        raise UpstreamError("all models failed") from last_error
 
 
 class GeminiEmbedder:
@@ -193,7 +244,10 @@ class GeminiEmbedder:
                 )
                 return [list(e.values or []) for e in resp.embeddings or []]
 
-            vectors.extend(_retry(call, "embed"))
+            try:
+                vectors.extend(_retry(call, "embed"))
+            except Exception as exc:
+                raise UpstreamError("embedding failed") from exc
         return np.array(vectors, dtype=np.float32)
 
     def embed_documents(self, texts: Sequence[str]) -> np.ndarray:

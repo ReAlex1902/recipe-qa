@@ -16,7 +16,10 @@ class Settings(BaseSettings):
 
     google_api_key: SecretStr
 
-    llm_model: str = "gemini-2.5-flash-lite"
+    # Fallback chain, comma-separated, cheapest first (ADR-0002).
+    llm_models: str = (
+        "gemini-2.5-flash-lite,gemini-3.1-flash-lite,gemini-3.5-flash-lite,gemini-2.5-flash"
+    )
     llm_temperature: float = 0.0
     llm_max_output_tokens: int = 1024
     llm_timeout_s: float = 20.0
@@ -27,6 +30,9 @@ class Settings(BaseSettings):
     corpus_path: Path = BACKEND_DIR / "data" / "corpus.json"
     static_dir: Path = REPO_DIR / "frontend" / "dist"
 
+    cache_size: int = 512
+    cache_ttl_s: float = 24 * 3600
+
     rate_limit_per_minute: int = 10
     daily_llm_budget: int = 2000
     # Number of reverse proxies in front of the app that append to X-Forwarded-For.
@@ -35,3 +41,7 @@ class Settings(BaseSettings):
 
     log_level: str = "INFO"
     git_sha: str = "dev"
+
+    @property
+    def llm_model_chain(self) -> list[str]:
+        return [m.strip() for m in self.llm_models.split(",") if m.strip()]

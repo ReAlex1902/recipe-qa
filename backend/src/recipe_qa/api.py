@@ -19,7 +19,7 @@ from starlette.concurrency import run_in_threadpool
 from recipe_qa.config import Settings
 from recipe_qa.llm import GeminiEmbedder, GeminiGenerator, UpstreamError, make_client
 from recipe_qa.models import Recipe
-from recipe_qa.pipeline import BudgetExhaustedError, Pipeline
+from recipe_qa.pipeline import BudgetExhaustedError, Pipeline, ResponseCache
 from recipe_qa.ratelimit import DailyBudget, RateLimiter
 from recipe_qa.retrieval import HybridRetriever
 from recipe_qa.schema import AskRequest, AskResponse, ErrorResponse
@@ -48,7 +48,7 @@ def build_pipeline(settings: Settings) -> Pipeline:
     embedder = GeminiEmbedder(client, settings.embedding_model, settings.embedding_dim)
     generator = GeminiGenerator(
         client,
-        settings.llm_model,
+        settings.llm_model_chain,
         temperature=settings.llm_temperature,
         max_output_tokens=settings.llm_max_output_tokens,
     )
@@ -56,6 +56,7 @@ def build_pipeline(settings: Settings) -> Pipeline:
         retriever=HybridRetriever(recipes, embedder, top_k=settings.top_k),
         generator=generator,
         budget=DailyBudget(settings.daily_llm_budget),
+        cache=ResponseCache(settings.cache_size, settings.cache_ttl_s),
     )
 
 
@@ -92,7 +93,7 @@ def create_app(
                 "fields": {
                     "event": "startup",
                     "version": settings.git_sha,
-                    "model": settings.llm_model,
+                    "models": settings.llm_model_chain,
                     "corpus_size": len(app.state.pipeline.retriever._recipes),
                     "embeddings": app.state.pipeline.retriever.has_embeddings,
                 }

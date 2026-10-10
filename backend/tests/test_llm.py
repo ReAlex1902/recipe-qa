@@ -49,7 +49,7 @@ def test_quota_error_falls_back_to_next_model() -> None:
     assert models.calls == ["m1", "m2"]
 
 
-def test_exhausted_model_is_skipped_until_next_day() -> None:
+def test_exhausted_model_is_skipped_during_cooldown() -> None:
     gen, models = _generator({"m1": _quota_error(), "m2": OK_JSON})
     gen.generate("q", [make_recipe("a")], Constraints(), allergy_mode=False)
     gen.generate("q", [make_recipe("a")], Constraints(), allergy_mode=False)

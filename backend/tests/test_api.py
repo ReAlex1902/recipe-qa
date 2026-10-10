@@ -215,7 +215,7 @@ def test_rate_limit_is_429(corpus: list[Recipe]) -> None:
 def test_daily_budget_is_503(corpus: list[Recipe]) -> None:
     client = _client(corpus, ScriptedGenerator(), daily_budget=1)
     assert client.post("/ask", json={"question": "carbonara"}).status_code == 200
-    resp = client.post("/ask", json={"question": "carbonara"})
+    resp = client.post("/ask", json={"question": "carbonara with lemon"})
     assert resp.status_code == 503
     assert resp.json()["error"]["code"] == "budget_exhausted"
 

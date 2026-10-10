@@ -1,6 +1,8 @@
 """The /ask pipeline (SPEC 4): constraints -> safety -> retrieve -> filter -> LLM -> validate."""
 
+import threading
 import time
+from collections import OrderedDict
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from typing import Any, Protocol
@@ -43,6 +45,41 @@ _PLANT_PHRASE_GROUPS = {"dairy", "egg"}
 
 class BudgetExhaustedError(RuntimeError):
     pass
+
+
+def normalize_question(question: str) -> str:
+    return " ".join(question.lower().split())
+
+
+class ResponseCache:
+    """LRU + TTL cache of responses by normalized question (ADR-0002).
+
+    The pipeline is deterministic for a given corpus and model chain (temperature 0), and
+    free-tier quotas are small, so repeated questions are served from memory.
+    """
+
+    def __init__(self, size: int = 512, ttl_s: float = 86400.0) -> None:
+        self._size = size
+        self._ttl_s = ttl_s
+        self._items: OrderedDict[str, tuple[float, AskResponse]] = OrderedDict()
+        self._lock = threading.Lock()
+
+    def get(self, question: str) -> AskResponse | None:
+        key = normalize_question(question)
+        with self._lock:
+            item = self._items.get(key)
+            if item is None or item[0] < time.monotonic():
+                self._items.pop(key, None)
+                return None
+            self._items.move_to_end(key)
+            return item[1]
+
+    def put(self, question: str, response: AskResponse) -> None:
+        with self._lock:
+            self._items[normalize_question(question)] = (time.monotonic() + self._ttl_s, response)
+            self._items.move_to_end(normalize_question(question))
+            while len(self._items) > self._size:
+                self._items.popitem(last=False)
 
 
 class Generator(Protocol):
@@ -92,11 +129,25 @@ def allergy_matches(recipes: Sequence[Recipe], groups: Sequence[str]) -> list[Al
 
 class Pipeline:
     def __init__(
-        self, retriever: HybridRetriever, generator: Generator, budget: DailyBudget
+        self,
+        retriever: HybridRetriever,
+        generator: Generator,
+        budget: DailyBudget,
+        cache: ResponseCache | None = None,
     ) -> None:
         self.retriever = retriever
         self.generator = generator
         self.budget = budget
+        self.cache = cache if cache is not None else ResponseCache()
+
+    def ask(self, question: str, request_id: str) -> tuple[AskResponse, Trace]:
+        cached = self.cache.get(question)
+        if cached is not None:
+            trace = Trace(outcome="cache_hit", model="cache")
+            return cached.model_copy(update={"request_id": request_id}), trace
+        response, trace = self._ask(question, request_id)
+        self.cache.put(question, response)
+        return response, trace
 
     def _refuse(
         self, reason: RefusalReason, constraints: Constraints, request_id: str, trace: Trace
@@ -113,7 +164,7 @@ class Pipeline:
             request_id=request_id,
         )
 
-    def ask(self, question: str, request_id: str) -> tuple[AskResponse, Trace]:
+    def _ask(self, question: str, request_id: str) -> tuple[AskResponse, Trace]:
         trace = Trace()
         start = time.perf_counter()
         constraints = parse_constraints(question)
