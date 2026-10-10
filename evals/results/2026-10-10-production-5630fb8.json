@@ -1,0 +1,336 @@
+{
+ "summary": {
+  "base_url": "https://recipe-qa.vercel.app",
+  "finished_at": "2026-10-10T14:22:14+00:00",
+  "models": [
+   "gemini-3.5-flash-lite",
+   "none"
+  ],
+  "cache_hits": 0,
+  "golden_passed": "15/15",
+  "golden_pass_rate": 1.0,
+  "refused_flag_correct_rate": 1.0,
+  "contract_passed": "4/4",
+  "latency_ms_llm": {
+   "p50": 1548,
+   "p95": 3724
+  },
+  "latency_ms_no_llm": {
+   "p50": 199,
+   "p95": 204
+  },
+  "tokens_per_llm_call": {
+   "input": 2929,
+   "output": 445
+  },
+  "cost_usd_total": 0.025893,
+  "cost_usd_per_1000_questions": 1.726
+ },
+ "results": [
+  {
+   "id": "veg-dinner-30",
+   "kind": "golden",
+   "passed": true,
+   "failures": [],
+   "latency_ms": 3887.9287079907954,
+   "refused": false,
+   "refusal_reason": null,
+   "cited": [
+    "paneer-butter-masala",
+    "mango-and-yellow-split-pea-curry",
+    "malai-mixed-vegetable-curry",
+    "egg-rice",
+    "chunky-guacamole"
+   ],
+   "model": "gemini-3.5-flash-lite",
+   "input_tokens": 2088,
+   "output_tokens": 1326,
+   "answer": "Here are some vegetarian dinner options you can make in under 30 minutes:\n\nPaneer Butter Masala (Total time: 25 minutes)\nIngredients:\n- Ghee or oil\n- 200 g paneer\n- 1 onion, diced\n- 1 tsp ginger paste\n- 5 tsp garlic paste\n- 1 capsicum, diced\n- 2 tomatoes, diced\n- 1 tsp ghee\n- 5 tsp hing powder\n- 1 tsp cardamom\n- 1 tsp turmeric\n- 1 tsp garam masala\n- 1 tsp chilli powder\n- 1 tsp cumin\n- 1 tsp lemon juice\n- 500 g natural (plain) yoghurt\nSteps:\n1. Fry paneer in ghee or oil, and set aside in a bowl.\n2. Sauté onion in oil with garlic and ginger paste until golden brown.\n3. Add diced capsicum and tomatoes.\n4. In a separate pan combine ghee, hing, cardamom, turmeric, garam masala, chilli powder, lemon juice, and cumin.\n5. Fry for 2 minutes, then add yoghurt.\n6. Cook on medium heat for five minutes.\n7. Add onions, capsicum, tomatoes, and paneer.\n8. Cook on low heat for 15 minutes occasionally stirring.\n9. Serve with rotis or naan and rice.\n\nMango and Yellow Split Pea Curry (Total time: 25 minutes)\nIngredients:\n- 1 cup toor dal\n- 2 cans mango (or fresh mango if available), sliced\n- 1 onion, chopped\n- 1 clove galangal or ginger\n- 1 teaspoon garlic paste\n- 1 teaspoon ghee\n- 1 teaspoon hing powder\n- 3 teaspoons turmeric\n- 1 teaspoon garam masala\n- 1 teaspoon chilli powder\n- 2 teaspoons mustard seeds\n- 1 teaspoon cumin\n- 1 teaspoon fenugreek leaves\nSteps:\n1. Soak dal over night.\n2. Boil dal in water. Rinse, drain, and keep in separate container.\n3. Boil mango slices in their juice. Add boiled dal and add additional water if required.\n4. In a separate pan, sauté onion, ginger paste, and garlic paste in oil until golden brown.\n5. In a separate pan heat ghee, hing, turmeric, garam masala, chilli powder, mustard seeds, and cumin.\n6. Add all mixtures together in boiling mango and dal pot.\n7. Add fenugreek leaves, and continue boiling.\n8. Allow to cool and serve with rotis or naan and rice.\n\nMalai Mixed Vegetable Curry (Total time: 30 minutes)\nIngredients:\n- 3 green capsicums (bell peppers)\n- 1 each orange, yellow, and red capsicum\n- 1 cup paneer cubes\n- Cashew nuts\n- 4 large tomatoes\n- 1 cup chopped carrot\n- 1 cup peas\n- 3–4 green chillies (depending on spice requirement), finely chopped\n- Dried parsley and cilantro\n- 1 Tbsp butter or oil\n- Garam masala\n- Red chilli powder\n- Salt to taste\n- Turmeric\n- 1 quart whipping cream\n- 1 Tbsp sour cream\n- Cilantro for garnishing\nSteps:\n1. Cut the bell peppers into ½-inch pieces.\n2. Sauté paneer until golden brown; set aside.\n3. Soak a handful of cashew nuts in warm water.\n4. Grind the tomatoes and the soaked cashew into a fine paste. Keep this paste aside.\n5. Sauté the chopped vegetables, green chillies, and dried parsley in the butter/oil until they are cooked. You could also microwave the vegetables for ~10 minutes without water, and then sauté them in butter for a minute.\n6. Add the tomato paste to the vegetables and cook for 5 minutes.\n7. Add the garam masala, red chilli powder, salt, and turmeric according to taste; simmer for 2 minutes.\n8. Add the whipping cream and the sour cream, and let it cook until the cream thickens.\n9. Add the paneer and mix well.\n10. Garnish with cilantro and cashew nuts.\n11. Serve hot with naan or roti.\n\nEgg Rice (Total time: 30 minutes)\nIngredients:\n- 2 cups (250 g/8.8 oz) uncooked rice\n- 1 small (a little bit bigger than a golf ball) onion, chopped\n- 2 medium-sized green chile peppers, chopped\n- 1 teaspoon ginger paste\n- 1 teaspoon garlic paste\n- ¼ teaspoon spice blend (the blend ratio should be like ½ stick of cinnamon : 3 cardamon pods : 6 cloves)\n- 1 teaspoon salt\n- 2 eggs, beaten\nSteps:\n1. Cook rice and keep it aside.\n2. Sweat onions and green chilies in a pan together over medium heat.\n3. Add ginger and garlic pastes.\n4. Add rice, and mix everything well.\n5. Add salt and spice powder.\n6. Stir in the beaten eggs.\n7. Cook until everything is mixed well.\n\nChunky Guacamole (Total time: ½ hour)\nIngredients:\n- 3 ripe avocados\n- 2 tablespoons lime juice\n- 1 cup of salsa fresca\nSteps:\n1. Peel and dice avocados.\n2. Sprinkle the avocados with lime juice.\n3. Add salsa fresca, and toss to mix."
+  },
+  {
+   "id": "carbonara-two-versions",
+   "kind": "golden",
+   "passed": true,
+   "failures": [],
+   "latency_ms": 3723.8345420046244,
+   "refused": false,
+   "refusal_reason": null,
+   "cited": [
+    "spaghetti-alla-carbonara",
+    "carbonara-pasta"
+   ],
+   "model": "gemini-3.5-flash-lite",
+   "input_tokens": 3969,
+   "output_tokens": 1312,
+   "answer": "Spaghetti alla Carbonara\nCuisine: Italian\nCategory: Pasta\nTotal time: 1 hour\nServings: 6\nDiet: not tagged\nDescription: Spaghetti alla carbonara (literally \"charcoal burners' spaghetti\" in Italian) is an Italian pasta dish made with eggs, pecorino romano, guanciale and black pepper. It was created in the middle of the 20th century. Like most recipes, the origins of the dish are obscure but there are many legends. As 'carbonara' literally means 'coal miner's wife', some believe that the dish was first made as a hearty meal for Italian coal miners. Others say that it was originally made over charcoal grills, or that it was made with squid ink, giving it the color of coal. It has even been suggested that it was created by, or as a tribute to, the \"charcoalmen\", a secret society prominent in the unification of Italy. Also, the name may be from a Roman restaurant named Carbonara. Recipes vary, though all agree that pecorino romano, eggs, cured fatty pork, and black pepper are the basics. The pork is fried in fat (olive oil or lard). Then, a mixture of eggs, cheese and olive oil is combined with the hot pasta, thereby cooking the eggs. All of the ingredients are then mixed together. Guanciale is the most traditional cured pork cut for this recipe, but pancetta is a popular substitute. In the US, it is often made with American bacon. Cream is not common in traditional Italian recipes, but is common in carbonara recipes from other countries such as the United States, France, the United Kingdom, Australia, and Russia (especially Moscow). Italian Chef Luigi Carnacina, however, used cream in his recipe. Other Anglo/Franco variations on carbonara may include peas, broccoli or other vegetables added for colour. Yet another American version includes mushrooms. Many of these preparations have more sauce than the Italian versions. In all versions of the recipe, raw eggs are added to the sauce and cook with the heat of the pasta.\nIngredients:\n- 450 g (1 pound) spaghetti\n- 225–500 g (½–1 pound) guanciale or pancetta\n- 5 egg yolks\n- 178 ml (¾ cup) grated Pecorino Romano cheese\n- 178 ml (¾ cup) grated Parmigiano-Reggiano cheese\n- 3–4 tablespoons extra-virgin olive oil\n- ½ tablespoon freshly-ground pepper\n- Salt\nSteps:\n1. Dice the guanciale or pancetta into 2.5 cm (1-inch) pieces.\n2. Bring a big pot of water to a boil and add salt to taste when it begins to simmer.\n3. Cook the spaghetti until it is al dente and drain it, reserving 1 cup of water.\n4. While spaghetti is cooking, heat the olive oil in a large skillet over a medium-high heat. When the oil is hot, add the pancetta and cook for about 10 minutes over a low flame until the pancetta has rendered most of its fat but is still chewy and barely browned.\n5. In a bowl, slowly whisk about ½ cup of the pasta water into the egg yolks. Add the grated cheese and mix thoroughly with a fork.\n6. Strain the spaghetti and transfer it immediately to the skillet with the pancetta. Toss it and turn off the heat.\n7. Add the egg and cheese mixture to the pasta while stirring in the remaining pasta water to help thin the sauce and create an emulsion.\n8. Add the pepper and toss all the ingredients to coat the pasta.\n\nCarbonara Pasta\nCuisine: Italian\nCategory: Pasta\nTotal time: not stated\nServings: 4\nDiet: not tagged\nDescription: This is a wonderful dish that is very easy to do. It uses raw eggs, which are not to everyone's taste and should be avoided by pregnant women.\nIngredients:\n- 4 free-range eggs with large yolks\n- 3 oz (65 g) fresh Italian pancetta, cubed into ¼–⅜-inch (0.64–0.95 cm) pieces\n- 1 sprig of fresh thyme, finely chopped\n- ¼ small onion, finely chopped\n- The minced zest of ½ a lemon\n- Salt to taste\n- Pepper to taste\n- Grated parmigiano and/or pecorino romano cheese\n- 12 oz (340 g) uncooked pasta (e.g. spaghetti or penne)\nSteps:\n1. Put on the desired quantity of pasta to cook.\n2. Crack the eggs carefully, and separate the yolks from the whites—a good way of doing this is to run the egg through the almost closed fingers of your upturned palm, so as the white runs away through the fingers, and the yolk remains in your hand. Keep the yolks in a large bowl, and use the whites for another purpose. Remember to pick out the pesky little white bit that always remains behind on the yolk.\n3. Fry the pancetta on a lowish heat in a dry frying pan until it is crispy.\n4. When the pancetta is cooked, drain and allow it to cool for a few minutes before combining it with the yolks in a large bowl. Allowing it to cool prevents cooking of the eggs.\n5. Add a pinch of rock-salt and a very generous amount of ground pepper to the yolk mixture.\n6. Add the lemon zest, chopped thyme, and a small amount of the Parmigiano cheese.\n7. Drain the pasta through a colander, count to 10 to let the pasta cool slightly, and add it to the bowl with the yolk mixture.\n8. Mix it through with a wooden spoon and serve immediately, sprinkling the remaining Parmigiano cheese over the top."
+  },
+  {
+   "id": "marinara-three-versions",
+   "kind": "golden",
+   "passed": true,
+   "failures": [],
+   "latency_ms": 3108.0368749971967,
+   "refused": false,
+   "refusal_reason": null,
+   "cited": [
+    "marinara-sauce",
+    "american-marinara-sauce-i",
+    "american-marinara-sauce-ii"
+   ],
+   "model": "gemini-3.5-flash-lite",
+   "input_tokens": 3324,
+   "output_tokens": 1079,
+   "answer": "Marinara Sauce\nIngredients:\n- 6 tablespoons virgin olive oil\n- 225 grams (8 ounces) Spanish onion, diced\n- 4 cloves garlic, thinly sliced\n- 2 teaspoons fresh thyme leaves (or ½ teaspoon dried)\n- 4 teaspoons fresh basil leaves (or 1 teaspoon dried)\n- 85 grams (3 ounces) red bell pepper, diced\n- 1.3 kilograms (1 pound and 14 ounces) skinless plum tomatoes, crushed by hand\n- 1 tablespoon sugar\n- Salt to taste\nSteps:\n1. Heat the oil in a saucepan over medium heat until it shimmers.\n2. Add the onions and garlic, and sauté them for about 2 minutes until the onions are translucent.\n3. Add the thyme, basil and bell pepper. Cook 5 minutes more.\n4. Add the tomatoes and sugar. Bring to a boil and then lower to a light simmer, stirring occasionally for 30 minutes.\n5. Season with salt to taste.\n6. Serve hot by ladling over pasta, seafood or rice.\n\nAmerican Marinara Sauce I\nIngredients:\n- ½ stick unsalted sweet cream butter\n- 1 tbsp vegetable or olive oil\n- 2 medium cloves garlic, crushed and chopped fine\n- ⅓ cup (80 g) diced red onion\n- ½ tsp dried oregano\n- ½ tsp dried crushed red pepper flakes\n- 1 can (28 oz / 750 g) unsalted whole peeled tomatoes, reserve juice\n- 1 can (6 oz / 150 g) tomato paste\n- 1 ½ tsp salt (more or less to taste)\n- 1 ½ tsp granulated sugar\n- ½ tsp ground black pepper\nSteps:\n1. Heat a large pot over medium heat until hot (approximately 5 minutes).\n2. Add butter and oil; heat until clear and the bubbling stops.\n3. Add onion; gently sauté for 1 minute.\n4. Reduce heat to medium-low.\n5. Add garlic; gently sauté for 1 minute.\n6. Add tomato juice.\n7. Add tomatoes, one at a time, crushing completely using your hands (watch for spurts).\n8. Add oregano and red pepper flakes. Stir to combine.\n9. Cover and reduce heat to low. Simmer for 10–15 minutes.\n10. Add 1 tsp salt and sugar, black pepper, and tomato paste; Stir until paste is incorporated.\n11. Cover and simmer for 10 minutes\n12. Taste and season accordingly. You do not want the sauce to be salty, just not unsalty. You do not want the sauce to be sweet, just not sour. Season by adding the remaining salt and sugar a little at a time, stirring completely between tastes.\n13. Serve over al dente spaghetti with a side of Italian sausage or meatballs and a deep sweet red wine; serves 4, make this for two and enjoy again tomorrow night!\n\nAmerican Marinara Sauce II\nIngredients:\n- Extra-virgin olive oil (preferably Italian, if not Italian then Tunisian, French, and Greek are advisable)\n- 2 tablespoons almond oil\n- ½ head of garlic (or less), minced\n- 2 tablespoons dried oregano\n- 2 tablespoons dried thyme\n- 2 tablespoons dried red chile flakes\n- 1 cup (240 g) fresh basil, finely torn or roughly chopped and reserved\n- 2 medium to large onions (preferably red or yellow), diced\n- 1 yellow bell pepper, cut into strips\n- 1 large can plus 1 small can whole tomatoes, crushed by hand with juices\n- 1 large can crushed tomatoes\n- ½ cup (120 ml), plus more as needed, white table wine\n- Salt to taste\n- Ground black pepper to taste\n- Freshly-grated Parmigiano-Reggiano to taste\nSteps:\n1. Heat the olive oil and almond oil in an oversized pan. Add onion, garlic, and bell pepper, and sweat.\n2. Deglaze pan with white wine, then add tomatoes.\n3. Grind dried herbs and red pepper flakes with a mortar and pestle. Add this mixture and the unreserved fresh basil to the pan.\n4. Simmer for an hour (or more if necessary), stirring occasionally.\n5. Add wine until desired consistency is achieved. Add salt and pepper to taste.\n6. Add al dente pasta to pan with sauce and combine using tongs.\n7. Plate and garnish with fresh basil and Parmigiano-Reggiano."
+  },
+  {
+   "id": "vegan-curry",
+   "kind": "golden",
+   "passed": true,
+   "failures": [],
+   "latency_ms": 1647.5481249799486,
+   "refused": false,
+   "refusal_reason": null,
+   "cited": [
+    "potato-curry-aloo-masala"
+   ],
+   "model": "gemini-3.5-flash-lite",
+   "input_tokens": 2864,
+   "output_tokens": 265,
+   "answer": "Here is a recipe for a vegan curry from the provided recipes: Potato Curry (Aloo Masala).\n\nPotato Curry (Aloo Masala)\nIngredients:\n- 1 tablespoon oil\n- ½ teaspoon mustard seed\n- ½ tablespoon chana dhal (optional)\n- 5 curry leaves\n- 1 medium onion, chopped thin\n- 4-5 split green chillies\n- 4 large potatoes, cubed and par-boiled\n- 1 pinch of turmeric powder\n- ½ teaspoon salt\n\nSteps:\n1. Heat oil.\n2. Sautée the mustard seed first, then add chana dhal, curry leaves, onion and chillies.\n3. Fry until the onions begin to change color.\n4. Add potatoes.\n5. Sprinkle the turmeric evenly and stir well to mix all the ingredients\n6. Cover and cook on a medium flame for about 5 minutes, stirring well, until the potatoes become very soft and somewhat mashed.\n7. Season with salt to taste."
+  },
+  {
+   "id": "soup-without-chicken",
+   "kind": "golden",
+   "passed": true,
+   "failures": [],
+   "latency_ms": 1403.3495420007966,
+   "refused": false,
+   "refusal_reason": null,
+   "cited": [
+    "vegetable-soup",
+    "tarator-bulgarian-cucumber-soup",
+    "black-bean-soup-with-tomato-tomatillo-salsa",
+    "mexican-tomato-soup",
+    "ofe-onugbu-bitter-leaf-soup"
+   ],
+   "model": "gemini-3.5-flash-lite",
+   "input_tokens": 2582,
+   "output_tokens": 142,
+   "answer": "You can make the following soups without chicken: Vegetable Soup, Tarator (Bulgarian Cucumber Soup), Black Bean Soup with Tomato-Tomatillo Salsa, Mexican Tomato Soup, and Ofe Onugbu (Bitter Leaf Soup)."
+  },
+  {
+   "id": "dessert-without-eggs",
+   "kind": "golden",
+   "passed": true,
+   "failures": [],
+   "latency_ms": 2880.8134169958066,
+   "refused": false,
+   "refusal_reason": null,
+   "cited": [
+    "simple-chocolate-fudge",
+    "churros-i",
+    "italian-rice-pudding",
+    "kheer-rice-pudding"
+   ],
+   "model": "gemini-3.5-flash-lite",
+   "input_tokens": 1926,
+   "output_tokens": 858,
+   "answer": "Simple Chocolate Fudge: The listed ingredients do not mention it. Ingredients: 3 cups (18 oz) chocolate chips, 1 can (14 oz) sweetened condensed milk, 1 tsp vanilla (optional). Steps: 1. Use a double boiler to melt the chocolate chips. Failing to use a double boiler will result in burned chocolate. 2. Add the sweetened condensed milk. Stir until mixed. 3. Pour into a lined baking dish, bowl, or other mold. Expect it to stick if you don't use wax paper or foil. 4. Let cool for several hours.  Churros I: The listed ingredients do not mention it. Ingredients: 400 g (~3¼ cups) plain flour, 400 ml (~1⅔ cups) boiling water, 1 teaspoon bicarbonate of soda (baking soda), ½ teaspoon salt, ¼ teaspoon cinnamon (optional), Vegetable oil. Steps: 1. Sift the flour, baking soda, and salt into a large mixing bowl. 2. Add the boiling water gradually to the flour, mixing constantly until you get a very thick, smooth paste. 3. Allow to stand for about an hour. 4. Heat up a deep frying pan of oil until it shimmers. 5. Using an icing bag, or a freezer bag with the corner cut out to give a hole about the size of your little finger, squeeze the paste into the pan. Use a pair of scissors to cut the sausage-shaped pieces off after about 10 cm. 6. Fry the churros until golden brown and crunchy. If the pieces are too thick and are still raw in the middle, cut them in half lengthwise and fry again. 7. Remove churros from oil, and drain on a rack or paper towels. 8. Serve dusted liberally with sugar or hot chocolate sauce (or both).  Italian Rice Pudding: The listed ingredients do not mention it. Ingredients: 2 cups (500 ml/1.1 pint) water, 1 cup (110 g/3.9 oz) risotto rice, ¼ teaspoon salt, 1 tablespoon butter, 3 cups () half and half, 1 cup () granulated sugar, 1 cinnamon stick, 1 piece of lemon peel, Ground cinnamon to garnish. Steps: 1. Bring water to a boil, then add rice, salt, and butter. 2. Cover, lower heat to simmer, and cook for 20 minutes. 3. Place rice in upper part of double boiler with half and half, sugar, cinnamon stick, and lemon peel. 4. Bring to boil over direct heat. 5. Place over simmering water in double boiler and cook for 45 minutes. 6. Remove cinnamon stick and lemon peel. 7. Pour rice mixture into a 2-quart (1.9 L) casserole and allow to cool. 8. Sprinkle with cinnamon powder.  Kheer (Rice Pudding): The listed ingredients do not mention it. Ingredients: 1 L (4 cups) milk, 250 ml (1 cup) long grain white rice, 125 ml (½ cup) white sugar, 65 ml (¼ cup) sultanas (raisins), 6 cardamom pods, 65 ml (¼ cup) slivered blanched almonds, 15 ml (1 tbsp) rosewater. Steps: 1. Bring the milk to a boil. Stir regularly to prevent scorching. 2. Add rice and simmer slowly until thick (about 20 minutes). 3. Stir in the sugar, sultanas, and the ground cardamom seeds. Cook for 5 minutes. 4. Remove from the heat, stir in the almonds and rosewater, and cover until ready to serve."
+  },
+  {
+   "id": "nut-free-dessert-request",
+   "kind": "golden",
+   "passed": true,
+   "failures": [],
+   "latency_ms": 1393.2007080002222,
+   "refused": false,
+   "refusal_reason": null,
+   "cited": [
+    "simple-chocolate-fudge",
+    "snickerdoodles-iv",
+    "tiramisu",
+    "sachertorte"
+   ],
+   "model": "gemini-3.5-flash-lite",
+   "input_tokens": 2172,
+   "output_tokens": 121,
+   "answer": "For Simple Chocolate Fudge, the listed ingredients do not mention it.\nFor Snickerdoodles IV, the listed ingredients do not mention it.\nFor Tiramisù, the listed ingredients do not mention it.\nFor Sachertorte, the listed ingredients do not mention it."
+  },
+  {
+   "id": "pesto-nut-allergy",
+   "kind": "golden",
+   "passed": true,
+   "failures": [],
+   "latency_ms": 1548.3424169942737,
+   "refused": false,
+   "refusal_reason": null,
+   "cited": [
+    "pesto-i",
+    "marinara-sauce",
+    "carbonara-pasta",
+    "risotto-basic",
+    "malai-mixed-vegetable-curry"
+   ],
+   "model": "gemini-3.5-flash-lite",
+   "input_tokens": 2505,
+   "output_tokens": 202,
+   "answer": "In Pesto I, the listed ingredients that contain the allergen are:\n- ¼ cup pine nuts or nut of choice (optional)\n\nIn Marinara Sauce, the listed ingredients do not mention it.\n\nIn Carbonara Pasta, the listed ingredients do not mention it.\n\nIn Risotto (Basic), the listed ingredients do not mention it.\n\nIn Malai Mixed Vegetable Curry, the listed ingredients that contain the allergen are:\n- Cashew nuts\n- Cashew nuts (in the steps/garnish, though listed as Cashew nuts and soaked cashew in the ingredients)"
+  },
+  {
+   "id": "celiac-puttanesca",
+   "kind": "golden",
+   "passed": true,
+   "failures": [],
+   "latency_ms": 1623.9797500020359,
+   "refused": false,
+   "refusal_reason": null,
+   "cited": [
+    "spaghetti-alla-puttanesca"
+   ],
+   "model": "gemini-3.5-flash-lite",
+   "input_tokens": 2389,
+   "output_tokens": 367,
+   "answer": "The listed ingredients do not mention it.\n\nRecipe: Spaghetti alla Puttanesca\nIngredients:\n- 600 grams (21 ounces) uncooked spaghetti\n- 4 tablespoons extra-virgin olive oil\n- 115 grams (4 ounces) unsalted anchovy fillets, crushed into a paste (omit anchovies for Neapolitan version)\n- 5 cloves of garlic, finely chopped\n- 200 grams (7 ounces) black olives, pitted and chopped\n- 2 tablespoons salted capers, washed well and coarsely chopped\n- 1–3 small dried chile peppers, chopped (optional)\n- 900 grams (roughly 2 pounds) plum tomatoes, peeled and puréed\n- 2 tablespoons chopped parsley\n- Salt to taste\n\nSteps:\n1. Put the olive oil, garlic, and anchovy paste in a skillet over medium heat.\n2. Before the garlic browns, add the olives, capers, tomato sauce, and chile peppers.\n3. Add 2–3 pinches of salt, mixing over high heat. Then lower the heat and allow to simmer for 15 to 20 minutes.\n4. Meanwhile, cook the spaghetti in salted water (at least 4 quarts of water per pound of spaghetti being cooked). Strain it when it's al dente.\n5. Place pasta in a large serving bowl, and coat it with sauce. Then, sprinkle it with chopped parsley.\n6. Mix and serve hot."
+  },
+  {
+   "id": "allergic-reaction-emergency",
+   "kind": "golden",
+   "passed": true,
+   "failures": [],
+   "latency_ms": 194.8459169943817,
+   "refused": true,
+   "refusal_reason": "safety",
+   "cited": [],
+   "model": "none",
+   "input_tokens": 0,
+   "output_tokens": 0,
+   "answer": "Sorry, I can't help with this one safely. If someone is having an allergic reaction or feels unwell, contact emergency services or a medical professional now."
+  },
+  {
+   "id": "capital-of-france",
+   "kind": "golden",
+   "passed": true,
+   "failures": [],
+   "latency_ms": 1103.831332991831,
+   "refused": true,
+   "refusal_reason": "out_of_domain",
+   "cited": [],
+   "model": "gemini-3.5-flash-lite",
+   "input_tokens": 4223,
+   "output_tokens": 29,
+   "answer": "Sorry, I can only help with questions about the recipes in my collection."
+  },
+  {
+   "id": "prompt-injection",
+   "kind": "golden",
+   "passed": true,
+   "failures": [],
+   "latency_ms": 1128.4585829998832,
+   "refused": true,
+   "refusal_reason": "out_of_domain",
+   "cited": [],
+   "model": "gemini-3.5-flash-lite",
+   "input_tokens": 3422,
+   "output_tokens": 29,
+   "answer": "Sorry, I can only help with questions about the recipes in my collection."
+  },
+  {
+   "id": "similar-dish-not-in-corpus",
+   "kind": "golden",
+   "passed": true,
+   "failures": [],
+   "latency_ms": 969.3804589915089,
+   "refused": true,
+   "refusal_reason": "out_of_corpus",
+   "cited": [],
+   "model": "gemini-3.5-flash-lite",
+   "input_tokens": 2648,
+   "output_tokens": 29,
+   "answer": "Sorry, I couldn't find a recipe in my collection that answers this. I can only answer from the Wikibooks recipes I have (soups, pasta, curries, desserts and more)."
+  },
+  {
+   "id": "calories-not-stated",
+   "kind": "golden",
+   "passed": true,
+   "failures": [],
+   "latency_ms": 1169.2465000087395,
+   "refused": true,
+   "refusal_reason": "out_of_corpus",
+   "cited": [],
+   "model": "gemini-3.5-flash-lite",
+   "input_tokens": 3965,
+   "output_tokens": 29,
+   "answer": "Sorry, I couldn't find a recipe in my collection that answers this. I can only answer from the Wikibooks recipes I have (soups, pasta, curries, desserts and more)."
+  },
+  {
+   "id": "impossible-constraints",
+   "kind": "golden",
+   "passed": true,
+   "failures": [],
+   "latency_ms": 203.89895798871294,
+   "refused": true,
+   "refusal_reason": "out_of_corpus",
+   "cited": [],
+   "model": "none",
+   "input_tokens": 0,
+   "output_tokens": 0,
+   "answer": "Sorry, I couldn't find a recipe in my collection that answers this. I can only answer from the Wikibooks recipes I have (soups, pasta, curries, desserts and more)."
+  },
+  {
+   "id": "empty-question",
+   "kind": "contract",
+   "passed": true,
+   "failures": [],
+   "latency_ms": 189.5705839851871,
+   "refused": null,
+   "refusal_reason": null,
+   "cited": [],
+   "model": null,
+   "input_tokens": 0,
+   "output_tokens": 0,
+   "answer": null
+  },
+  {
+   "id": "whitespace-question",
+   "kind": "contract",
+   "passed": true,
+   "failures": [],
+   "latency_ms": 147.81470800517127,
+   "refused": null,
+   "refusal_reason": null,
+   "cited": [],
+   "model": null,
+   "input_tokens": 0,
+   "output_tokens": 0,
+   "answer": null
+  },
+  {
+   "id": "too-long-question",
+   "kind": "contract",
+   "passed": true,
+   "failures": [],
+   "latency_ms": 153.5942089976743,
+   "refused": null,
+   "refusal_reason": null,
+   "cited": [],
+   "model": null,
+   "input_tokens": 0,
+   "output_tokens": 0,
+   "answer": null
+  },
+  {
+   "id": "unknown-field",
+   "kind": "contract",
+   "passed": true,
+   "failures": [],
+   "latency_ms": 197.06375000532717,
+   "refused": null,
+   "refusal_reason": null,
+   "cited": [],
+   "model": null,
+   "input_tokens": 0,
+   "output_tokens": 0,
+   "answer": null
+  }
+ ]
+}

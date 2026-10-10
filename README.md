@@ -125,8 +125,8 @@ overlapping dishes (2 carbonaras, 3 marinara sauces, 2 guacamoles, 2 rice puddin
   prompt building, model fallback, API contract and invariants, rate limit, budget, cache,
   ops endpoints.
 
-**Latest production run (2026-10-10, commit `c55d43a`, the last code change): 15/15 golden
-cases, 4/4 contract cases, p50 1.9 s / p95 3.6 s end to end; refusals without a model call
+**Latest production run (2026-10-10, commit `5630fb8`, the last code change): 15/15 golden
+cases, 4/4 contract cases, p50 1.5 s / p95 3.7 s end to end; refusals without a model call
 0.2 s.** Reports cited here are committed in [`evals/results/`](evals/results).
 
 What these runs do and do not show:
