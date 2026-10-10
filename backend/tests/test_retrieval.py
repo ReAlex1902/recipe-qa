@@ -185,3 +185,9 @@ def test_precomputed_document_vectors_skip_the_embedding_call(
 def test_precomputed_vectors_must_match_corpus_size(small_corpus: list[Recipe]) -> None:
     with pytest.raises(ValueError):
         HybridRetriever(small_corpus, FakeEmbedder(), doc_vectors=np.zeros((2, 5)))
+
+
+def test_sub_recipe_line_fails_any_exclusion() -> None:
+    pie = make_recipe("pie", ingredients=["1 recipe Flaky Pie Crust", "4 cups rhubarb"])
+    assert not satisfies(pie, Constraints(exclude_ingredients=["egg"]))
+    assert satisfies(pie, Constraints())
