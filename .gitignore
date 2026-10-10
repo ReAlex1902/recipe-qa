@@ -22,6 +22,7 @@ frontend/dist/
 
 # eval output
 evals/reports/
+# evals/results/ holds the reports cited in README/ADRs and is committed
 
 .DS_Store
 
