@@ -34,6 +34,7 @@ from recipe_qa.schema import AskRequest, AskResponse, ErrorResponse
 
 log = logging.getLogger("recipe_qa")
 
+OPS_RATE_LIMIT_PER_MINUTE = 30
 _SAFE_REQUEST_ID = re.compile(r"^[A-Za-z0-9._-]{1,64}$")
 
 SECURITY_HEADERS = {
@@ -189,9 +190,14 @@ def create_app(
     started = time.monotonic()
     started_at = datetime.now(UTC).isoformat(timespec="seconds")
 
+    ops_limiter = RateLimiter(OPS_RATE_LIMIT_PER_MINUTE)
+
     def require_ops_token(request: Request) -> None:
         if settings.ops_token is None:
             raise HTTPException(status_code=404)
+        # Limited before the token check, so guessing the token is rate limited too.
+        if not ops_limiter.allow(client_ip(request, settings.trusted_proxy_hops)):
+            raise HTTPException(status_code=429)
         expected = f"Bearer {settings.ops_token.get_secret_value()}"
         given = request.headers.get("authorization", "")
         if not hmac.compare_digest(given.encode(), expected.encode()):
@@ -205,7 +211,7 @@ def create_app(
         generator = p.generator
         return {
             "version": settings.git_sha,
-            "instance": os.environ.get("RENDER_INSTANCE_ID", socket.gethostname()),
+            "instance": os.environ.get("INSTANCE_ID") or socket.gethostname(),
             "started_at": started_at,
             "process": {
                 "pid": os.getpid(),

@@ -14,6 +14,7 @@ Environment:
     GIT_SHA          commit being deployed
     GOOGLE_API_KEY   Gemini API key                        (deploy)
     OPS_TOKEN        bearer token for /ops/* endpoints     (deploy, verify)
+    FORCE_DEPLOY=1   redeploy even if GIT_SHA is live (new env values apply on deploy only)
 """
 
 from __future__ import annotations
@@ -125,14 +126,18 @@ def production_deployment(project_id: str) -> dict[str, Any] | None:
 
 def production_url(project_id: str) -> str:
     domains = api("GET", f"/v9/projects/{project_id}/domains") or {}
-    names = [d["name"] for d in domains.get("domains", []) if d.get("verified")]
-    preferred = sorted(names, key=len)
-    return f"https://{preferred[0]}" if preferred else f"https://{PROJECT}.vercel.app"
+    names = sorted((d["name"] for d in domains.get("domains", []) if d.get("verified")), key=len)
+    if not names:
+        # Never guess a URL: verify() sends OPS_TOKEN to it.
+        sys.exit(f"no verified production domain for project {project_id}")
+    return f"https://{names[0]}"
 
 
 def run(*args: str) -> None:
+    """Run the Vercel CLI with a minimal environment: only what it needs, no app secrets."""
     print("+", " ".join(args))
-    if subprocess.run(args, cwd=APP_DIR, check=False).returncode != 0:  # noqa: S603
+    env = {k: os.environ[k] for k in ("PATH", "HOME", "VERCEL_TOKEN") if k in os.environ}
+    if subprocess.run(args, cwd=APP_DIR, env=env, check=False).returncode != 0:  # noqa: S603
         sys.exit(f"command failed: {args[3]}")
 
 
@@ -140,7 +145,8 @@ def deploy() -> None:
     git_sha = _env("GIT_SHA")
     project = ensure_project()
     current = production_deployment(project["id"])
-    if current and current.get("meta", {}).get("gitSha") == git_sha:
+    force = os.environ.get("FORCE_DEPLOY") == "1"  # e.g. after rotating a secret
+    if not force and current and current.get("meta", {}).get("gitSha") == git_sha:
         print(f"{git_sha} is already live in production; nothing to deploy")
     else:
         ui = ROOT / "frontend" / "dist"

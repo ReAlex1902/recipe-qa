@@ -4,6 +4,13 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Manual redeploy of main, e.g. after rotating GOOGLE_API_KEY or OPS_TOKEN.
+  workflow_dispatch:
+    inputs:
+      force_deploy:
+        description: "Redeploy even if this commit is already live"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -87,7 +94,7 @@ jobs:
         run: docker logs app || true
 
   deploy:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     needs: [backend, frontend, secrets-scan, image]
     runs-on: ubuntu-24.04
     environment:
@@ -117,6 +124,7 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           OPS_TOKEN: ${{ secrets.OPS_TOKEN }}
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          FORCE_DEPLOY: ${{ inputs.force_deploy && '1' || '0' }}
       - name: smoke test the live service
         run: python3 deploy/vercel.py verify
         env:
