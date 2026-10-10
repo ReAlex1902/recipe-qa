@@ -38,7 +38,12 @@ prices per 1M tokens: 2.5-flash-lite $0.10 in / $0.40 out, 3.1-flash-lite $0.25 
 model (safety pre-check, empty filter result) and cache hits cost $0; the query embedding
 adds ~$0.000002.
 
-**Production run after all fixes** (2026-10-10 12:03 UTC, `https://recipe-qa.vercel.app`,
+**Production run after review 2** (2026-10-10 13:10 UTC, commit `8353d72`, golden set
+with allergen exclusion, three marinara versions and a similar-dish case): **15/15 golden,
+4/4 contract**, p50 1.5 s / p95 3.5 s, again served by the fallback model.
+Report: `evals/results/2026-10-10T1310Z-production-8353d72.json`.
+
+**Production run after the first fixes** (2026-10-10 12:03 UTC, `https://recipe-qa.vercel.app`,
 commit `9efa4a6`): **15/15 golden, 4/4 contract, `refused` 15/15**; end-to-end latency
 from the client p50 1.6 s / p95 2.9 s; refusals without a model call 0.24 s. The primary
 model's daily free quota was already used, so every answer came from the first fallback,
@@ -98,7 +103,7 @@ What the failures in the per-model runs were:
 
 - Cost at list price **depends on which model in the chain answered**: ≈ $0.42 per 1,000
   questions on the primary (≈ 3.3k input + 0.2k output tokens), ≈ $1.44-1.52 per 1,000 on
-  the first fallback, which is above the SPEC target of $1. Every answer reports its model
+  the first fallback ($1.77 in the 8353d72 run, longer answers), above the SPEC target of $1. Every answer reports its model
   in `X-LLM-Model` and the logs, so the real cost is measurable per request. The production
   eval run on 2026-10-10 was served entirely by the fallback because the primary's free
   quota was used up; on a paid key that would not happen. Free-tier capacity: ~80 model calls per day before the chain is

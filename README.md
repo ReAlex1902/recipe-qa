@@ -122,9 +122,10 @@ overlapping dishes (2 carbonaras, 3 marinara sauces, 2 guacamoles, 2 rice puddin
   prompt building, model fallback, API contract and invariants, rate limit, budget, cache,
   ops endpoints.
 
-**Latest production run (2026-10-10, commit `9efa4a6`): 15/15 golden cases, 4/4 contract
-cases, p50 1.6 s / p95 2.9 s end to end** (served by the fallback model; the primary's
-free quota was used up). Per-model runs: see the table in
+**Latest production run (2026-10-10, commit `8353d72`): 15/15 golden cases, 4/4 contract
+cases, p50 1.5 s / p95 3.5 s end to end; refusals without a model call 0.19 s** (served by
+the fallback model; the primary's free quota was used up). Reports cited here are committed
+in [`evals/results/`](evals/results). Per-model runs: see the table in
 [ADR-0002](docs/adr/0002-model-refusals-and-quota.md#measurements). Evals run on demand
 (GitHub Actions → `eval` → Run workflow), not on every push, because one run uses ~13 of
 the 20 free daily calls of a model.
@@ -181,7 +182,7 @@ release are in its Actions run.
 | Tokens per question that reaches the model | ≈ 3.3k in, 0.2k out | eval reports |
 | Cost per question, primary model (gemini-2.5-flash-lite list price) | **≈ $0.00042** | 3,343 × $0.10/M + 213 × $0.40/M |
 | Cost per 1,000 questions, primary model | **≈ $0.42** (+ $0.002 embeddings); refusals before the model and cache hits: $0 | |
-| Cost per 1,000 questions, first fallback (gemini-3.5-flash-lite) | **≈ $1.44**, above the SPEC target of $1 | production eval report |
+| Cost per 1,000 questions, first fallback (gemini-3.5-flash-lite) | **≈ $1.4-1.8**, above the SPEC target of $1 | production eval reports |
 | Cost today | $0: free-tier key, free hosting | |
 | Latency, model questions (local, warm) | p50 1.3 s, p95 2.5 s | eval, 2.5-flash-lite |
 | Latency, refusals without model | p50 4 ms | eval |
