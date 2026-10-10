@@ -6,11 +6,12 @@ from dataclasses import dataclass, field
 import jsonschema
 import pytest
 from fastapi.testclient import TestClient
+from pydantic import SecretStr
 
 from recipe_qa.api import create_app
 from recipe_qa.config import Settings
 from recipe_qa.llm import Generation, UpstreamError
-from recipe_qa.models import Recipe
+from recipe_qa.models import Constraints, Recipe
 from recipe_qa.pipeline import Pipeline
 from recipe_qa.ratelimit import DailyBudget, RateLimiter
 from recipe_qa.retrieval import HybridRetriever
@@ -30,7 +31,13 @@ class ScriptedGenerator:
     calls: list[list[str]] = field(default_factory=list)
     model: str = "fake-model"
 
-    def generate(self, question: str, recipes: Sequence[Recipe], allergy_mode: bool) -> Generation:
+    def generate(
+        self,
+        question: str,
+        recipes: Sequence[Recipe],
+        constraints: Constraints,
+        allergy_mode: bool,
+    ) -> Generation:
         self.calls.append([r.id for r in recipes])
         if self.fail:
             raise UpstreamError("boom")
@@ -65,7 +72,7 @@ def _client(
     rate_per_minute: int = 100,
     daily_budget: int = 100,
 ) -> TestClient:
-    settings = Settings(google_api_key="test", rate_limit_per_minute=rate_per_minute)
+    settings = Settings(google_api_key=SecretStr("test"), rate_limit_per_minute=rate_per_minute)
     pipeline = Pipeline(
         retriever=HybridRetriever(corpus, FakeEmbedder()),
         generator=gen,
@@ -102,7 +109,9 @@ def test_answer_has_citations_from_corpus(corpus: list[Recipe]) -> None:
 def test_ids_not_retrieved_are_dropped(corpus: list[Recipe]) -> None:
     gen = ScriptedGenerator(recipe_ids=["carbonara-pasta", "made-up-recipe"])
     body = _ask(_client(corpus, gen), "carbonara")
-    assert [c["recipe_id"] for c in body["citations"]] == ["carbonara-pasta"]  # type: ignore[union-attr,index]
+    citations = body["citations"]
+    assert isinstance(citations, list)
+    assert [c["recipe_id"] for c in citations] == ["carbonara-pasta"]
 
 
 def test_answer_without_valid_citation_becomes_out_of_corpus(corpus: list[Recipe]) -> None:
@@ -155,7 +164,9 @@ def test_allergy_question_gets_check_and_notice(corpus: list[Recipe]) -> None:
     assert body["safety_notice"]
     assert body["allergy_check"] == {
         "allergens": ["tree_nut"],
-        "matches": [{"recipe_id": "pesto", "allergen": "tree_nut", "ingredient": "¼ cup pine nuts"}],
+        "matches": [
+            {"recipe_id": "pesto", "allergen": "tree_nut", "ingredient": "¼ cup pine nuts"}
+        ],
     }
 
 
@@ -187,7 +198,9 @@ def test_invalid_json_is_422(corpus: list[Recipe]) -> None:
 
 
 def test_upstream_failure_is_503(corpus: list[Recipe]) -> None:
-    resp = _client(corpus, ScriptedGenerator(fail=True)).post("/ask", json={"question": "carbonara"})
+    resp = _client(corpus, ScriptedGenerator(fail=True)).post(
+        "/ask", json={"question": "carbonara"}
+    )
     assert resp.status_code == 503
     assert resp.json()["error"]["code"] == "upstream_unavailable"
 
@@ -224,8 +237,12 @@ def test_healthz(corpus: list[Recipe]) -> None:
 def test_response_model_rejects_broken_invariants() -> None:
     with pytest.raises(ValueError):
         AskResponse(
-            answer="x", citations=[], refused=False, refusal_reason=None,
-            safety_notice=None, allergy_check=None,
+            answer="x",
+            citations=[],
+            refused=False,
+            refusal_reason=None,
+            safety_notice=None,
+            allergy_check=None,
             constraints={"max_total_minutes": None, "diet": None, "exclude_ingredients": []},  # type: ignore[arg-type]
             request_id="r",
         )
