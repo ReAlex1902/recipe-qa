@@ -1,3 +1,4 @@
+from datetime import datetime
 from pathlib import Path
 
 from pydantic import AliasChoices, Field, SecretStr
@@ -41,6 +42,10 @@ class Settings(BaseSettings):
 
     # Bearer token for GET /ops/status and /ops/logs. Unset = endpoints disabled (404).
     ops_token: SecretStr | None = None
+    # Time-limited token for reviewers: accepted only before the expiry (UTC, ISO 8601).
+    # Without an expiry it is never accepted.
+    ops_review_token: SecretStr | None = None
+    ops_review_token_expires_at: datetime | None = None
 
     log_level: str = "INFO"
     # Set by the image build (Docker) or the deploy script (Vercel); "dev" locally.

@@ -40,7 +40,8 @@ curl -s -H "Authorization: Bearer $OPS_TOKEN" "https://recipe-qa.vercel.app/ops/
 ```
 
 The token is read-only: it opens only these two GET endpoints, and logs contain no
-secrets. Without it both return 401. Logs live in the memory of the function instance
+secrets. Without it both return 401. The reviewer token expires by itself: after the
+time shown in `review_token_expires_at` (in `/ops/status`) the service rejects it with 401. Logs live in the memory of the function instance
 that serves the request, so after a cold start the list can be short.
 
 4. Run the golden set yourself: `make eval BASE_URL=https://recipe-qa.vercel.app`

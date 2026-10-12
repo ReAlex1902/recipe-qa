@@ -14,6 +14,8 @@ Environment:
     GIT_SHA          commit being deployed
     GOOGLE_API_KEY   Gemini API key                        (deploy)
     OPS_TOKEN        bearer token for /ops/* endpoints     (deploy, verify)
+    OPS_REVIEW_TOKEN, OPS_REVIEW_TOKEN_EXPIRES_AT
+                     optional reviewer token and its expiry (deploy)
     FORCE_DEPLOY=1   redeploy even if GIT_SHA is live (new env values apply on deploy only)
 """
 
@@ -44,6 +46,9 @@ PLAIN_ENV = {
     "LOG_LEVEL": "INFO",
 }
 SECRET_ENV = ("GOOGLE_API_KEY", "OPS_TOKEN")
+# Optional reviewer access that expires by itself (see README, For reviewers).
+OPTIONAL_SECRET_ENV = ("OPS_REVIEW_TOKEN",)
+OPTIONAL_PLAIN_ENV = ("OPS_REVIEW_TOKEN_EXPIRES_AT",)
 
 
 def _env(name: str) -> str:
@@ -100,6 +105,9 @@ def ensure_project() -> dict[str, Any]:
         project = api("POST", "/v11/projects", {"name": PROJECT, "framework": "fastapi"})
         print(f"created project {project['id']}")
     values = {**PLAIN_ENV, **{k: _env(k) for k in SECRET_ENV}}
+    for key in OPTIONAL_SECRET_ENV + OPTIONAL_PLAIN_ENV:
+        if os.environ.get(key, "").strip():
+            values[key] = os.environ[key].strip()
     for key, value in sorted(values.items()):
         api(
             "POST",
@@ -107,7 +115,7 @@ def ensure_project() -> dict[str, Any]:
             {
                 "key": key,
                 "value": value,
-                "type": "sensitive" if key in SECRET_ENV else "plain",
+                "type": "sensitive" if key in SECRET_ENV + OPTIONAL_SECRET_ENV else "plain",
                 "target": ["production"],
             },
             upsert="true",

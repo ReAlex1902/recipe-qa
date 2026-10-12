@@ -105,6 +105,10 @@ content, and there is no content.
 - `GET /ops/status`, `GET /ops/logs?limit=N` — runtime status and recent log lines of the
   instance, for reviewers. Require `Authorization: Bearer <OPS_TOKEN>`: 401 without a valid
   token, 404 when `OPS_TOKEN` is not configured. Not part of the public contract.
+  Two tokens are accepted: the owner's `OPS_TOKEN` (no expiry, also used by CI smoke
+  tests) and an optional reviewer token `OPS_REVIEW_TOKEN`, accepted only while the
+  current UTC time is before `OPS_REVIEW_TOKEN_EXPIRES_AT`; without an expiry it is never
+  accepted. `/ops/status` shows the reviewer token's expiry.
 
 ### 3.4 Response headers on `/ask`
 

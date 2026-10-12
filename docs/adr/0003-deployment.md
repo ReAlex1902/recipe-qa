@@ -56,6 +56,9 @@ logs and runtime state. 6. Acceptable cold start and limits for a demo-scale ser
   - `GET /ops/status` — deployed SHA, instance id, start time, uptime, RSS memory, CPU
     time, Python version, embeddings state, model cooldowns, LLM budget, cache size;
   - `GET /ops/logs?limit=N` — last ≤ 2,000 structured log lines of that instance.
+  Reviewers get a separate token that the service stops accepting at a set UTC time
+  (`OPS_REVIEW_TOKEN_EXPIRES_AT`), so access ends without a redeploy; the owner's token
+  stays for CI smoke tests.
   The deploy log of every release is in its GitHub Actions run (build output, deployment
   URL, smoke-test results).
 

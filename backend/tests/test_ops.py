@@ -82,7 +82,7 @@ def test_ops_endpoints_are_rate_limited(small_corpus: list[Recipe]) -> None:
 
 
 # Reviewer token with an expiry (SPEC 3.3)
-REVIEW = "test-review-token"  # noqa: S105 - test fixture, not a secret
+REVIEW = "test-review-token"
 EXPIRES = datetime(2026, 10, 15, 12, 0, tzinfo=UTC)
 
 
@@ -106,7 +106,7 @@ def test_review_token_works_before_expiry(small_corpus: list[Recipe]) -> None:
     resp = client.get("/ops/logs", headers={"Authorization": f"Bearer {REVIEW}"})
     assert resp.status_code == 200
     status = client.get("/ops/status", headers={"Authorization": f"Bearer {REVIEW}"}).json()
-    assert status["review_token_expires_at"] == "2026-10-15T12:00:00+00:00"
+    assert status["review_token_expires_at"] == EXPIRES.isoformat()
 
 
 def test_review_token_is_rejected_after_expiry(small_corpus: list[Recipe]) -> None:
@@ -114,9 +114,13 @@ def test_review_token_is_rejected_after_expiry(small_corpus: list[Recipe]) -> No
     for path in ("/ops/status", "/ops/logs"):
         assert client.get(path, headers={"Authorization": f"Bearer {REVIEW}"}).status_code == 401
     # the owner token is not affected
-    assert client.get("/ops/status", headers={"Authorization": f"Bearer {TOKEN}"}).status_code == 200
+    assert (
+        client.get("/ops/status", headers={"Authorization": f"Bearer {TOKEN}"}).status_code == 200
+    )
 
 
 def test_review_token_without_expiry_is_disabled(small_corpus: list[Recipe]) -> None:
     client = _review_client(small_corpus, EXPIRES, None)
-    assert client.get("/ops/status", headers={"Authorization": f"Bearer {REVIEW}"}).status_code == 401
+    assert (
+        client.get("/ops/status", headers={"Authorization": f"Bearer {REVIEW}"}).status_code == 401
+    )

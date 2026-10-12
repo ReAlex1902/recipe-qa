@@ -116,6 +116,7 @@ def create_app(
     *,
     pipeline: Pipeline | None = None,
     limiter: RateLimiter | None = None,
+    clock: Callable[[], datetime] = lambda: datetime.now(UTC),
 ) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -198,9 +199,16 @@ def create_app(
         # Limited before the token check, so guessing the token is rate limited too.
         if not ops_limiter.allow(client_ip(request, settings.trusted_proxy_hops)):
             raise HTTPException(status_code=429)
-        expected = f"Bearer {settings.ops_token.get_secret_value()}"
-        given = request.headers.get("authorization", "")
-        if not hmac.compare_digest(given.encode(), expected.encode()):
+        given = request.headers.get("authorization", "").encode()
+        accepted = [settings.ops_token]
+        expires = settings.ops_review_token_expires_at
+        if settings.ops_review_token is not None and expires is not None and clock() < expires:
+            accepted.append(settings.ops_review_token)
+        # compare against every accepted token (no early exit), constant time each
+        matches = [
+            hmac.compare_digest(given, f"Bearer {t.get_secret_value()}".encode()) for t in accepted
+        ]
+        if not any(matches):
             raise HTTPException(status_code=401, headers={"WWW-Authenticate": "Bearer"})
 
     @app.get("/ops/status", include_in_schema=False)
@@ -228,6 +236,11 @@ def create_app(
             "llm_budget": {"used": p.budget.used, "limit": p.budget.limit},
             "cache_entries": len(p.cache),
             "rate_limit_per_minute": settings.rate_limit_per_minute,
+            "review_token_expires_at": (
+                settings.ops_review_token_expires_at.isoformat()
+                if settings.ops_review_token_expires_at
+                else None
+            ),
         }
 
     @app.get("/ops/logs", include_in_schema=False)
