@@ -1,0 +1,32 @@
+# secrets
+.env
+.env.*
+!.env.example
+
+# local reference documents
+*.pdf
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# node
+node_modules/
+frontend/dist/
+
+# eval output
+evals/reports/
+# evals/results/ holds the reports cited in README/ADRs and is committed
+
+.DS_Store
+
+# UI build copied into the backend for the Vercel bundle
+backend/static_ui/
+.vercel/
+backend/.vercel/

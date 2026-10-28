@@ -1,0 +1,49 @@
+{
+ "summary": {
+  "base_url": "https://recipe-qa.vercel.app",
+  "finished_at": "2026-10-10T13:13:34+00:00",
+  "models": [
+   "gemini-3.5-flash-lite"
+  ],
+  "cache_hits": 0,
+  "golden_passed": "1/1",
+  "golden_pass_rate": 1.0,
+  "refused_flag_correct_rate": 1.0,
+  "contract_passed": "0/0",
+  "latency_ms_llm": {
+   "p50": 5173,
+   "p95": 5173
+  },
+  "latency_ms_no_llm": {
+   "p50": null,
+   "p95": 0
+  },
+  "tokens_per_llm_call": {
+   "input": 1926,
+   "output": 855
+  },
+  "cost_usd_total": 0.002715,
+  "cost_usd_per_1000_questions": 2.715
+ },
+ "results": [
+  {
+   "id": "dessert-without-eggs",
+   "kind": "golden",
+   "passed": true,
+   "failures": [],
+   "latency_ms": 5173.337165993871,
+   "refused": false,
+   "refusal_reason": null,
+   "cited": [
+    "simple-chocolate-fudge",
+    "churros-i",
+    "italian-rice-pudding",
+    "kheer-rice-pudding"
+   ],
+   "model": "gemini-3.5-flash-lite",
+   "input_tokens": 1926,
+   "output_tokens": 855,
+   "answer": "Simple Chocolate Fudge. The listed ingredients do not mention egg. Ingredients: 3 cups (18 oz) chocolate chips, 1 can (14 oz) sweetened condensed milk, 1 tsp vanilla (optional). Steps: 1. Use a double boiler to melt the chocolate chips. Failing to use a double boiler will result in burned chocolate. 2. Add the sweetened condensed milk. Stir until mixed. 3. Pour into a lined baking dish, bowl, or other mold. Expect it to stick if you don't use wax paper or foil. 4. Let cool for several hours. Churros I. The listed ingredients do not mention egg. Ingredients: 400 g (~3¼ cups) plain flour, 400 ml (~1⅔ cups) boiling water, 1 teaspoon bicarbonate of soda (baking soda), ½ teaspoon salt, ¼ teaspoon cinnamon (optional), Vegetable oil. Steps: 1. Sift the flour, baking soda, and salt into a large mixing bowl. 2. Add the boiling water gradually to the flour, mixing constantly until you get a very thick, smooth paste. 3. Allow to stand for about an hour. 4. Heat up a deep frying pan of oil until it shimmers. 5. Using an icing bag, or a freezer bag with the corner cut out to give a hole about the size of your little finger, squeeze the paste into the pan. Use a pair of scissors to cut the sausage-shaped pieces off after about 10 cm. 6. Fry the churros until golden brown and crunchy. If the pieces are too thick and are still raw in the middle, cut them in half lengthwise and fry again. 7. Remove churros from oil, and drain on a rack or paper towels. 8. Serve dusted liberally with sugar or hot chocolate sauce (or both). Italian Rice Pudding. The listed ingredients do not mention egg. Ingredients: 2 cups (500 ml/1.1 pint) water, 1 cup (110 g/3.9 oz) risotto rice, ¼ teaspoon salt, 1 tablespoon butter, 3 cups () half and half, 1 cup () granulated sugar, 1 cinnamon stick, 1 piece of lemon peel, Ground cinnamon to garnish. Steps: 1. Bring water to a boil, then add rice, salt, and butter. 2. Cover, lower heat to simmer, and cook for 20 minutes. 3. Place rice in upper part of double boiler with half and half, sugar, cinnamon stick, and lemon peel. 4. Bring to boil over direct heat. 5. Place over simmering water in double boiler and cook for 45 minutes. 6. Remove cinnamon stick and lemon peel. 7. Pour rice mixture into a 2-quart (1.9 L) casserole and allow to cool. 8. Sprinkle with cinnamon powder. Kheer (Rice Pudding). The listed ingredients do not mention egg. Ingredients: 1 L (4 cups) milk, 250 ml (1 cup) long grain white rice, 125 ml (½ cup) white sugar, 65 ml (¼ cup) sultanas (raisins), 6 cardamom pods, 65 ml (¼ cup) slivered blanched almonds, 15 ml (1 tbsp) rosewater. Steps: 1. Bring the milk to a boil. Stir regularly to prevent scorching. 2. Add rice and simmer slowly until thick (about 20 minutes). 3. Stir in the sugar, sultanas, and the ground cardamom seeds. Cook for 5 minutes. 4. Remove from the heat, stir in the almonds and rosewater, and cover until ready to serve."
+  }
+ ]
+}

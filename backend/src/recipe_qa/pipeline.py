@@ -1,0 +1,263 @@
+"""The /ask pipeline (SPEC 4): constraints -> safety -> retrieve -> filter -> LLM -> validate."""
+
+import re
+import threading
+import time
+from collections import OrderedDict
+from collections.abc import Sequence
+from dataclasses import dataclass, field
+from typing import Any, Protocol
+
+from recipe_qa.constraints import (
+    allergens_in_question,
+    is_allergy_question,
+    parse_constraints,
+    safety_precheck,
+)
+from recipe_qa.lexicon import ALLERGENS, PLANT_PHRASE_GROUPS, matching_lines
+from recipe_qa.llm import Generation
+from recipe_qa.models import Constraints, Recipe
+from recipe_qa.ratelimit import DailyBudget
+from recipe_qa.retrieval import HybridRetriever
+from recipe_qa.schema import AllergyCheck, AllergyMatch, AskResponse, Citation, RefusalReason
+
+REFUSAL_MESSAGES: dict[RefusalReason, str] = {
+    "out_of_corpus": (
+        "Sorry, I couldn't find a recipe in my collection that answers this. I can only "
+        "answer from the Wikibooks recipes I have (soups, pasta, curries, desserts and more)."
+    ),
+    "out_of_domain": ("Sorry, I can only help with questions about the recipes in my collection."),
+    "safety": (
+        "Sorry, I can't help with this one safely. If someone is having an allergic reaction "
+        "or feels unwell, contact emergency services or a medical professional now."
+    ),
+}
+
+SAFETY_NOTICE = (
+    "This check only reads the ingredient list of a community-edited Wikibooks recipe. "
+    "Packaged ingredients (stock, sauces, chocolate, spices) can contain allergens that are "
+    "not listed, and cross-contamination is not covered. If you have an allergy, check every "
+    "label and ask a medical professional."
+)
+
+# Phrases that claim an allergen is absent or that a dish is safe (SPEC 5.4.1).
+ABSENCE_CLAIM_RE = re.compile(
+    r"\b[\w]+[- ]free\b|\bsafe (?:for|to eat)\b|\ballergy[- ]friendly\b|"
+    r"\bsuitable for (?:people|someone|anyone|those) with\b|\bis safe\b|\band safe\b",
+    re.IGNORECASE,
+)
+
+
+def deterministic_allergy_answer(
+    recipes: Sequence[Recipe], groups: Sequence[str], matches: Sequence[AllergyMatch]
+) -> str:
+    names = ", ".join(g.replace("_", " ") for g in groups) or "the allergen you named"
+    lines = []
+    for r in recipes:
+        found = [m.ingredient for m in matches if m.recipe_id == r.id]
+        if found:
+            lines.append(f"{r.title} lists: " + "; ".join(f'"{f}"' for f in found) + ".")
+        else:
+            lines.append(f"The listed ingredients of {r.title} do not mention {names}.")
+    return " ".join(lines) + " See the notice below before cooking."
+
+
+class BudgetExhaustedError(RuntimeError):
+    pass
+
+
+def normalize_question(question: str) -> str:
+    return " ".join(question.lower().split())
+
+
+class ResponseCache:
+    """LRU + TTL cache of responses by normalized question (ADR-0002).
+
+    The pipeline is deterministic for a given corpus and model chain (temperature 0), and
+    free-tier quotas are small, so repeated questions are served from memory.
+    """
+
+    def __init__(self, size: int = 512, ttl_s: float = 86400.0) -> None:
+        self._size = size
+        self._ttl_s = ttl_s
+        self._items: OrderedDict[str, tuple[float, AskResponse]] = OrderedDict()
+        self._lock = threading.Lock()
+
+    def get(self, question: str) -> AskResponse | None:
+        key = normalize_question(question)
+        with self._lock:
+            item = self._items.get(key)
+            if item is None or item[0] < time.monotonic():
+                self._items.pop(key, None)
+                return None
+            self._items.move_to_end(key)
+            return item[1]
+
+    def __len__(self) -> int:
+        return len(self._items)
+
+    def put(self, question: str, response: AskResponse) -> None:
+        with self._lock:
+            self._items[normalize_question(question)] = (time.monotonic() + self._ttl_s, response)
+            self._items.move_to_end(normalize_question(question))
+            while len(self._items) > self._size:
+                self._items.popitem(last=False)
+
+
+class Generator(Protocol):
+    def generate(
+        self,
+        question: str,
+        recipes: Sequence[Recipe],
+        constraints: Constraints,
+        allergy_mode: bool,
+    ) -> Generation: ...
+
+
+@dataclass
+class Trace:
+    """Everything needed to debug one answer; logged as one JSON line (README, Debugging)."""
+
+    constraints: dict[str, Any] = field(default_factory=dict)
+    allergy_groups: list[str] = field(default_factory=list)
+    precheck: str | None = None
+    candidates_after_filter: int | None = None
+    retrieved: list[dict[str, Any]] = field(default_factory=list)
+    retrieval_degraded: bool = False
+    model: str | None = None
+    model_decision: str | None = None
+    model_recipe_ids: list[str] = field(default_factory=list)
+    dropped_recipe_ids: list[str] = field(default_factory=list)
+    input_tokens: int = 0
+    output_tokens: int = 0
+    outcome: str | None = None
+    outcome_note: str | None = None
+    timings_ms: dict[str, float] = field(default_factory=dict)
+
+
+def _ms(start: float) -> float:
+    return round((time.perf_counter() - start) * 1000, 1)
+
+
+def allergy_matches(recipes: Sequence[Recipe], groups: Sequence[str]) -> list[AllergyMatch]:
+    return [
+        AllergyMatch(recipe_id=r.id, allergen=g, ingredient=line)  # type: ignore[arg-type]
+        for r in recipes
+        for g in groups
+        for line in matching_lines(
+            r.ingredients, ALLERGENS[g], ignore_plant_phrases=g in PLANT_PHRASE_GROUPS
+        )
+    ]
+
+
+class Pipeline:
+    def __init__(
+        self,
+        retriever: HybridRetriever,
+        generator: Generator,
+        budget: DailyBudget,
+        cache: ResponseCache | None = None,
+    ) -> None:
+        self.retriever = retriever
+        self.generator = generator
+        self.budget = budget
+        self.cache = cache if cache is not None else ResponseCache()
+
+    def ask(self, question: str, request_id: str) -> tuple[AskResponse, Trace]:
+        cached = self.cache.get(question)
+        if cached is not None:
+            trace = Trace(outcome="cache_hit", model="cache")
+            return cached.model_copy(update={"request_id": request_id}), trace
+        response, trace = self._ask(question, request_id)
+        self.cache.put(question, response)
+        return response, trace
+
+    def _refuse(
+        self, reason: RefusalReason, constraints: Constraints, request_id: str, trace: Trace
+    ) -> AskResponse:
+        trace.outcome = f"refused:{reason}"
+        return AskResponse(
+            answer=REFUSAL_MESSAGES[reason],
+            citations=[],
+            refused=True,
+            refusal_reason=reason,
+            safety_notice=None,
+            allergy_check=None,
+            constraints=constraints,
+            request_id=request_id,
+        )
+
+    def _ask(self, question: str, request_id: str) -> tuple[AskResponse, Trace]:
+        trace = Trace()
+        start = time.perf_counter()
+        constraints = parse_constraints(question)
+        allergy_mode = is_allergy_question(question)
+        groups = allergens_in_question(question)
+        trace.constraints = constraints.model_dump()
+        trace.allergy_groups = groups
+
+        if safety_precheck(question):
+            trace.precheck = "safety"
+            return self._refuse("safety", constraints, request_id, trace), trace
+
+        if self.budget.exhausted():
+            raise BudgetExhaustedError  # before spending a query-embedding call
+        t = time.perf_counter()
+        result = self.retriever.retrieve(question, constraints)
+        trace.timings_ms["retrieve"] = _ms(t)
+        trace.candidates_after_filter = result.candidates_after_filter
+        trace.retrieval_degraded = result.degraded
+        trace.retrieved = [
+            {"id": h.recipe.id, "bm25_rank": h.bm25_rank, "vector_rank": h.vector_rank}
+            for h in result.hits
+        ]
+        if not result.hits:
+            trace.precheck = "no_candidates"
+            return self._refuse("out_of_corpus", constraints, request_id, trace), trace
+
+        if not self.budget.consume():
+            raise BudgetExhaustedError
+        recipes = [h.recipe for h in result.hits]
+        t = time.perf_counter()
+        gen = self.generator.generate(question, recipes, constraints, allergy_mode)
+        trace.timings_ms["llm"] = _ms(t)
+        trace.model = gen.model
+        trace.model_decision = gen.decision
+        trace.model_recipe_ids = gen.recipe_ids
+        trace.input_tokens, trace.output_tokens = gen.input_tokens, gen.output_tokens
+
+        if gen.decision != "answer":
+            response = self._refuse(gen.decision, constraints, request_id, trace)
+            trace.timings_ms["total"] = _ms(start)
+            return response, trace
+
+        retrieved = {r.id: r for r in recipes}
+        cited = [retrieved[i] for i in dict.fromkeys(gen.recipe_ids) if i in retrieved]
+        trace.dropped_recipe_ids = [i for i in gen.recipe_ids if i not in retrieved]
+        if not cited or not gen.answer:
+            response = self._refuse("out_of_corpus", constraints, request_id, trace)
+            trace.outcome = "refused:out_of_corpus(no_valid_citation)"
+            trace.timings_ms["total"] = _ms(start)
+            return response, trace
+
+        answer = gen.answer
+        allergy_check = None
+        if allergy_mode:
+            matches = allergy_matches(cited, groups)
+            allergy_check = AllergyCheck(allergens=groups, matches=matches)  # type: ignore[arg-type]
+            if ABSENCE_CLAIM_RE.search(answer):
+                # SPEC 5.4.1: never assert absence. The model did; use the server's listing.
+                trace.outcome_note = "absence_claim_replaced"
+                answer = deterministic_allergy_answer(cited, groups, matches)
+        trace.outcome = "answered"
+        trace.timings_ms["total"] = _ms(start)
+        return AskResponse(
+            answer=answer,
+            citations=[Citation(recipe_id=r.id, title=r.title, url=r.url) for r in cited],
+            refused=False,
+            refusal_reason=None,
+            safety_notice=SAFETY_NOTICE if allergy_mode else None,
+            allergy_check=allergy_check,
+            constraints=constraints,
+            request_id=request_id,
+        ), trace

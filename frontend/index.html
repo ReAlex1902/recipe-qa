@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="description" content="Ask questions about 52 recipes from the Wikibooks Cookbook. Every answer cites its source." />
+    <title>Recipe Q&amp;A</title>
+  </head>
+  <body>
+    <div class="page">
+      <aside class="panel">
+        <header class="brand">
+          <span class="icon icon-pot" aria-hidden="true"></span>
+          <span>Recipe Q&amp;A</span>
+        </header>
+
+        <h1>Ask the cookbook.</h1>
+        <p class="lede">
+          Answers come only from 52 recipes of the
+          <a href="https://en.wikibooks.org/wiki/Cookbook" target="_blank" rel="noopener noreferrer">Wikibooks Cookbook</a>,
+          and every answer names its sources.
+        </p>
+
+        <form id="ask-form" class="ask" novalidate>
+          <label for="question">Your question</label>
+          <div class="field">
+            <textarea id="question" name="question" rows="3" maxlength="500" required
+              aria-describedby="question-help"
+              placeholder="What's a vegetarian dinner I can make in under 30 minutes?"></textarea>
+            <button id="submit" class="send" type="submit" aria-label="Ask">
+              <span class="icon icon-send" aria-hidden="true"></span>
+            </button>
+          </div>
+          <p id="question-help" class="help">
+            <span>Enter to ask, Shift+Enter for a new line</span>
+            <span id="counter" class="mono">0/500</span>
+          </p>
+        </form>
+
+        <section class="examples" aria-labelledby="examples-title">
+          <h2 id="examples-title">Try one of these</h2>
+          <div class="chips">
+            <button type="button" class="chip">How do I make carbonara?</button>
+            <button type="button" class="chip">What's a vegetarian dinner I can make in under 30 minutes?</button>
+            <button type="button" class="chip">Is the pesto nut-free?</button>
+            <button type="button" class="chip">Can you suggest a vegan curry?</button>
+            <button type="button" class="chip">How do I make sushi?</button>
+          </div>
+        </section>
+
+        <dl class="facts">
+          <div><dt>Recipes</dt><dd class="mono">52</dd></div>
+          <div><dt>Cuisines</dt><dd class="mono">16</dd></div>
+          <div><dt>Vegetarian or vegan</dt><dd class="mono">18</dd></div>
+        </dl>
+      </aside>
+
+      <main id="result" class="result" aria-live="polite" aria-busy="false">
+        <div class="empty">
+          <span class="icon icon-book" aria-hidden="true"></span>
+          <h2>Answers appear here</h2>
+          <p>
+            Ask about a dish, an ingredient, a time limit or a diet. Questions the recipes
+            cannot answer are declined, with the reason shown.
+          </p>
+        </div>
+      </main>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

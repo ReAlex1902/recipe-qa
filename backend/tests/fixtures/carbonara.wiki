@@ -1,0 +1,21 @@
+__NOTOC__
+{{recipesummary|category=Pasta recipes|servings=6|time=1 hour|difficulty=2|Image = [[Image:Spaghetti alla Carbonara (Madrid).JPG|300px]]}}
+{{recipe}} | [[Cookbook:Pasta Recipes|Pasta]] | [[cookbook:Cuisine of Italy|Cuisine of Italy]]
+
+'''''Spaghetti alla carbonara''''' is an Italian pasta dish made with eggs, pecorino romano and [[Cookbook:Pepper|black pepper]].<ref name="Alberini">{{cite book |first1=Massimo |title=Guida}}</ref>
+
+==Ingredients==
+*150 [[Cookbook:Gram|g]] [[Cookbook:Guanciale|guanciale]], diced
+*4 [[Cookbook:Egg|egg]] yolks
+*50 g [[Cookbook:Pecorino Romano Cheese|pecorino romano]], grated
+*400 g [[Cookbook:Spaghetti|spaghetti]]
+
+==Procedure==
+#Boil the spaghetti in salted water.
+#Fry the guanciale until crisp.<ref>A note.</ref>
+#Mix yolks and cheese, toss with the hot pasta off the heat.
+
+== References ==
+<references />
+
+[[Category:Italian recipes]]
