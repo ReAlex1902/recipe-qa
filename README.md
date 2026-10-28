@@ -1,51 +1,65 @@
-# Recipe Q&A Service
+# Recipe Q&A
 
-Answers natural-language questions about 52 recipes from the
-[Wikibooks Cookbook](https://en.wikibooks.org/wiki/Cookbook), with citations, and refuses
-— in a machine-readable way — what the corpus cannot answer.
+[![ci](https://github.com/ReAlex1902/recipe-qa/actions/workflows/ci.yml/badge.svg)](https://github.com/ReAlex1902/recipe-qa/actions/workflows/ci.yml)
 
-| | |
+A question-answering service over 52 recipes from the
+[Wikibooks Cookbook](https://en.wikibooks.org/wiki/Cookbook). It answers only from those
+recipes, cites every source, respects constraints such as time, diet and excluded
+ingredients, handles allergy questions carefully, and refuses what the recipes cannot
+answer with a machine-readable reason.
+
+**Live demo: https://recipe-qa.vercel.app**
+
+![Recipe Q&A answering "Is the pesto nut-free?" with the allergen line, a safety notice and the cited source](docs/images/demo.jpg)
+
+## Try it
+
+Each link opens the demo and asks the question:
+
+| Question | What it shows |
 |---|---|
-| UI | https://recipe-qa.vercel.app |
-| API | `POST https://recipe-qa.vercel.app/ask` · OpenAPI: `/docs` · health: `/healthz` |
-| Container status / logs | `GET /ops/status`, `GET /ops/logs` with `Authorization: Bearer <OPS_TOKEN>` (token sent with the submission) |
-| Spec · ADRs · Evals | [SPEC.md](SPEC.md) · [docs/adr](docs/adr) · [evals](evals) |
-| AI usage notes | [docs/ai-usage.md](docs/ai-usage.md), [CLAUDE.md](CLAUDE.md) |
+| [How do I make carbonara?](https://recipe-qa.vercel.app/?q=How+do+I+make+carbonara%3F) | two recipes disagree: both versions, both cited |
+| [What's a vegetarian dinner I can make in under 30 minutes?](https://recipe-qa.vercel.app/?q=What%27s+a+vegetarian+dinner+I+can+make+in+under+30+minutes%3F) | hard filters on time and diet, checked against recipe metadata |
+| [Is the pesto nut-free?](https://recipe-qa.vercel.app/?q=Is+the+pesto+nut-free%3F) | allergy mode: ingredient lines listed by the server, never an "X-free" claim |
+| [Give me a dessert without eggs.](https://recipe-qa.vercel.app/?q=Give+me+a+dessert+without+eggs.) | excluded ingredient as a hard filter |
+| [How do I make gazpacho?](https://recipe-qa.vercel.app/?q=How+do+I+make+gazpacho%3F) | refusal: `out_of_corpus` (a similar dish exists, the asked one does not) |
+| [What is the capital of France?](https://recipe-qa.vercel.app/?q=What+is+the+capital+of+France%3F) | refusal: `out_of_domain` |
 
-> The Gemini key is on the free tier (~20 model calls per model per day, 4 models in the
-> fallback chain); after that the API returns `503 upstream_unavailable` until 07:00 UTC.
+API:
 
 ```bash
 curl -s https://recipe-qa.vercel.app/ask -H 'content-type: application/json' \
   -d '{"question": "What is a vegetarian dinner I can make in under 30 minutes?"}' | jq
 ```
 
-## For reviewers
+OpenAPI at [`/docs`](https://recipe-qa.vercel.app/docs). The demo runs on a free Gemini key (about 20 model
+calls per model per day, four models in a fallback chain); when all are used up the API
+answers `503 upstream_unavailable` until 07:00 UTC.
 
-1. Open the UI: https://recipe-qa.vercel.app (or call the API, example above).
-2. Read in this order: [SPEC.md](SPEC.md), [docs/adr](docs/adr), [evals](evals), then the
-   sections below. Deploy history and build logs: the repository's Actions tab.
-3. Logs and runtime status of the running service (the token is sent with the submission,
-   it is not in the repository):
+## Highlights
 
-```bash
-export OPS_TOKEN=...   # from the submission e-mail
+- **Grounded by construction.** The model only picks recipe ids from what was retrieved;
+  titles, URLs and refusal texts come from the server, never from the model.
+- **Constraints are filters, not prompts.** Time, diet and excluded ingredients are parsed
+  deterministically and applied before ranking, so every cited recipe provably fits.
+- **Spec first, measured always.** [SPEC.md](SPEC.md) defines the contract and invariants;
+  a 15-question golden set ([evals](evals)) checks every response against them. Latest
+  production run: 15/15 golden, 4/4 contract.
+- **Decisions on record.** Three [ADRs](docs/adr) with alternatives, real cost and latency
+  numbers, and the conditions that would invalidate each decision.
+- **Shipped like production.** 188 offline tests, `mypy --strict`, pinned Docker image,
+  CI with secret scanning and container smoke tests, deploys of tested commits only.
 
-# deployed git SHA, instance, uptime, memory, CPU, embeddings, model cooldowns, LLM budget
-curl -s -H "Authorization: Bearer $OPS_TOKEN" https://recipe-qa.vercel.app/ops/status
+| Read | For |
+|---|---|
+| [SPEC.md](SPEC.md) | API contract, behaviour rules, edge cases, acceptance criteria |
+| [docs/adr](docs/adr) | retrieval, model choice and refusals, deployment |
+| [evals](evals) | golden set, harness, committed production reports |
+| [docs/ai-usage.md](docs/ai-usage.md) · [CLAUDE.md](CLAUDE.md) | how the project was built with a coding agent |
 
-# last log lines: one JSON line per request (question, filters, retrieved recipes, model,
-# tokens, per-stage timings), find a request by the id shown in the UI
-curl -s -H "Authorization: Bearer $OPS_TOKEN" "https://recipe-qa.vercel.app/ops/logs?limit=50"
-```
-
-The token is read-only: it opens only these two GET endpoints, and logs contain no
-secrets. Without it both return 401. The reviewer token expires by itself: after the
-time shown in `review_token_expires_at` (in `/ops/status`) the service rejects it with 401. Logs live in the memory of the function instance
-that serves the request, so after a cold start the list can be short.
-
-4. Run the golden set yourself: `make eval BASE_URL=https://recipe-qa.vercel.app`
-   (uses ~13 model calls of the free daily quota; see the note above).
+**Stack:** Python 3.12, FastAPI, pydantic v2, Google Gemini (generation + embeddings),
+BM25 + vector retrieval with rank fusion, TypeScript + Vite UI, Docker, GitHub Actions,
+Vercel.
 
 ## How it works
 
@@ -71,7 +85,7 @@ Repository layout:
 ```
 backend/            FastAPI service (Python 3.12, uv)
   src/recipe_qa/    api, pipeline, retrieval, constraints, lexicon, llm, ingest/
-  data/corpus.json  the corpus (built by `make ingest`, committed for review)
+  data/corpus.json  the corpus (built by `make ingest`, committed so changes are reviewable)
   tests/            unit + API contract tests (no network)
 frontend/           one-page UI, TypeScript + Vite, served by the backend
 evals/              golden set, eval harness, retrieval ablation, response JSON Schema
@@ -136,7 +150,7 @@ What these runs do and do not show:
   not been measured in production**; its only golden run is the local per-model run in
   ADR-0002 (13/15, before the allergy and prompt fixes). Re-run `eval` after 07:00 UTC to
   measure it.
-- To stay at 15 questions (the brief asks for 12-15), `tom-yum-time`, `tiramisu-ingredients`,
+- To keep the golden set at 15 questions, `tom-yum-time`, `tiramisu-ingredients`,
   `guacamole` and `sushi` were replaced by cases for allergen exclusion, three marinara
   versions, a similar dish not in the corpus and a "nut-free dessert" request. Checks of
   factual content in the answer text are now `guanciale` (carbonara), `tomato` (marinara)
@@ -149,7 +163,7 @@ the 20 free daily calls of a model.
 ## Deployment
 
 **Where:** Vercel Hobby — the FastAPI app runs as one Vercel Function (Python 3.12) at
-https://recipe-qa.vercel.app. **Why:** the owner's constraint is free with no payment card,
+https://recipe-qa.vercel.app. **Why:** the constraint was free hosting with no payment card,
 not even a verification hold. Hugging Face Spaces (`402`, Docker Spaces need PRO) and
 Render (`402`, card required for this account) were tried and failed at service creation;
 Cloud Run, Fly.io and Koyeb need a card; Back4app's free URL expires after 60 minutes.
@@ -178,8 +192,9 @@ token to the CLI only through the environment. Nothing secret is in the repo or 
 **One-time bootstrap** (done): a Vercel Hobby account, an access token for the team, the
 three secrets in the GitHub `production` environment.
 
-**Container-level access (chosen option: logs and runtime status):** Vercel Hobby has no
-team seats, so the service exposes, behind a bearer token:
+**Logs and runtime status:** Vercel Hobby has no team seats, so the service exposes two
+read-only endpoints behind a bearer token (the owner's token, or a time-limited token for
+invited viewers that the service stops accepting at a set time):
 
 ```bash
 curl -s -H "Authorization: Bearer $OPS_TOKEN" https://recipe-qa.vercel.app/ops/status | jq
@@ -259,7 +274,7 @@ nosniff); graceful degradation (BM25 fallback, model fallback chain, retries).
 |---|---|
 | Free LLM quota (~80 calls/day) | Paid Gemini tier or Vertex AI |
 | Rate limit, budget, cache, log buffer are per function instance | Redis (e.g. Upstash) for limits/cache; a log drain or OpenTelemetry backend with retention |
-| Reviewers cannot see the platform dashboard (Hobby has no seats) | Vercel Pro, or Cloud Run with IAM viewer roles |
+| Outside viewers cannot see the platform dashboard (Hobby has no seats) | Vercel Pro, or Cloud Run with IAM viewer roles |
 | No metrics/alerts (only logs) | OpenTelemetry traces + metrics (latency per stage, refusal rate by reason, fallback rate); alert on 5xx and quota exhaustion |
 | Golden set is small (15) and English-only | Grow to 100+ from production questions; LLM-as-judge for groundedness of the answer text |
 | Answer text groundedness is checked only indirectly (citations, phrases) | Add a claim-level check (each quantity/step present in the cited recipe) in evals |
@@ -272,5 +287,4 @@ nosniff); graceful degradation (BM25 fallback, model fallback chain, retries).
 No conversation history, no streaming, no user accounts, no admin UI, no multilingual
 support, no vector database, no UI framework. The corpus is fixed per deployment
 (rebuilding it is a reviewed commit). The UI got one design pass only after the core was
-complete, deployed and evaluated (assignment: extras only on a finished core); it changed
-markup and CSS, not the API contract.
+complete, deployed and evaluated; it changed markup and CSS, not the API contract.

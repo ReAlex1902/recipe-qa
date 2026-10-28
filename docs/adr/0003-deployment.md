@@ -5,7 +5,7 @@ failed on the "no payment card" constraint and are recorded below.
 
 ## Context
 
-Requirements (assignment §07): public URL for UI and API; a way for reviewers to see how
+Requirements: public URL for UI and API; a way for outside viewers to see how
 the service runs at container level; infrastructure as code; a new deployment from the
 repository without manual UI steps; secrets in the environment; reproducible builds;
 deploying twice is safe. Owner constraint: **free, and no payment card anywhere — not even
@@ -71,7 +71,7 @@ logs and runtime state. 6. Acceptable cold start and limits for a demo-scale ser
   do not share them, and `/ops/*` shows the instance that served the request.
 - Logs in the Vercel dashboard are visible to the owner only (Hobby); reviewers get the
   `/ops/logs` view.
-- Hobby is for non-commercial use, which fits a take-home; production would be Pro.
+- Hobby is for non-commercial use, which fits a demo project; production would be Pro.
 - Measured on the deployed function: `X-Forwarded-For` has 1 entry → `TRUSTED_PROXY_HOPS=1`.
 
 ## This decision is invalid when

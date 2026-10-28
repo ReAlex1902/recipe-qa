@@ -46,7 +46,7 @@ PLAIN_ENV = {
     "LOG_LEVEL": "INFO",
 }
 SECRET_ENV = ("GOOGLE_API_KEY", "OPS_TOKEN")
-# Optional reviewer access that expires by itself (see README, For reviewers).
+# Optional read-only ops access for external viewers that expires by itself (SPEC 3.3).
 OPTIONAL_SECRET_ENV = ("OPS_REVIEW_TOKEN",)
 OPTIONAL_PLAIN_ENV = ("OPS_REVIEW_TOKEN_EXPIRES_AT",)
 

@@ -7,7 +7,7 @@ Important prompts below are quoted from the session (translated from Russian whe
 
 ## Prompts that shaped the work
 
-1. Kick-off: "The take-home assignment and a Google API key for Gemini are in this folder.
+1. Kick-off: "The task description and a Google API key for Gemini are in this folder.
    Use exactly these inputs and solve the case. All files must stay in this folder."
 2. Hosting: "I don't care where, it must be free and work — do whatever is needed and ask
    me for what you need." Later: "No cards at all, not even a trial. Find any free way."
@@ -58,7 +58,7 @@ Rewritten or changed after review / measurement:
 ## Pace, and what the commit timestamps mean
 
 The whole history was produced in one agent-assisted session of about 3 hours (commit
-times 13:19-16:30), not the 6-8 hours of the brief. Test-first pairs are often 1-3
+times 13:19-16:30). Test-first pairs are often 1-3
 minutes apart because the agent wrote the test, I read it, it was committed, then the
 implementation followed. Some early commits are large (the wikitext parser, time parsing,
 diet lexicon and constraint parsing landed in one `feat:`). The order is real (the failing

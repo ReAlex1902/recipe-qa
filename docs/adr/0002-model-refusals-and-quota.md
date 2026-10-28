@@ -4,7 +4,7 @@ Status: accepted · Date: 2026-10-10
 
 ## Context
 
-- The LLM provider is fixed by the inputs of the assignment: a Google AI Studio key.
+- The LLM provider is given: the project has a Google AI Studio key.
   It is a **free-tier** key. Measured limits: `generate_content_free_tier_requests`
   **limit: 20 per day per model** (gemini-2.5-flash-lite, from the 429 error body), a low
   per-minute limit on gemini-2.5-flash, and a per-minute embedding limit where one
@@ -16,7 +16,7 @@ Status: accepted · Date: 2026-10-10
 ## Criteria
 
 1. Golden-set pass rate and correct `refused` flag (SPEC AC2).
-2. Latency p50/p95 on the free tier (what reviewers will see).
+2. Latency p50/p95 on the free tier (what visitors of the demo see).
 3. Cost per 1,000 questions at list price (what production would pay).
 4. Availability under a 20-requests-per-day quota.
 
@@ -101,7 +101,7 @@ What the failures in the per-model runs were:
    contain unverified safety claims (Pesto I says replacing pine nuts with walnuts or
    almonds is "necessary for people with nut allergies").
 4. **Cache:** responses are cached in memory by normalized question (LRU 512, TTL 24 h).
-   The pipeline is deterministic for a fixed corpus and model chain, and reviewers will
+   The pipeline is deterministic for a fixed corpus and model chain, and visitors will
    repeat the example questions. A cache hit costs no quota.
 
 ## Consequences

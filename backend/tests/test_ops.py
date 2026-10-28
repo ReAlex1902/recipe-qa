@@ -1,4 +1,4 @@
-"""Ops endpoints: container status and recent logs for reviewers (README, Deployment)."""
+"""Ops endpoints: container status and recent logs behind bearer tokens (SPEC 3.3)."""
 
 import logging
 from datetime import UTC, datetime, timedelta

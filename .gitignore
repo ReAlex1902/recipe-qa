@@ -3,7 +3,7 @@
 .env.*
 !.env.example
 
-# assignment brief (confidential, not part of the deliverable)
+# local reference documents
 *.pdf
 
 # python

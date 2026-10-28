@@ -8,7 +8,7 @@ from typing import Any
 import httpx
 
 API_URL = "https://en.wikibooks.org/w/api.php"
-USER_AGENT = "RecipeQA-ingest/1.0 (take-home assignment; https://github.com/ReAlex1902)"
+USER_AGENT = "RecipeQA-ingest/1.0 (portfolio project; https://github.com/ReAlex1902/recipe-qa)"
 BATCH_SIZE = 50  # MediaWiki limit for titles/revids per request (anonymous)
 
 

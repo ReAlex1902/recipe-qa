@@ -185,11 +185,19 @@ function renderLoading(question: string): HTMLElement {
 
 let inFlight: AbortController | null = null;
 
+/** Keep the current question in the address bar (?q=...) so an answer can be shared. */
+function shareableUrl(question: string): void {
+  const url = new URL(window.location.href);
+  url.searchParams.set("q", question);
+  window.history.replaceState(null, "", url);
+}
+
 async function submitQuestion(question: string): Promise<void> {
   if (!question) {
     input.focus();
     return;
   }
+  shareableUrl(question);
   inFlight?.abort();
   const controller = new AbortController();
   inFlight = controller;
@@ -233,4 +241,12 @@ for (const button of document.querySelectorAll<HTMLButtonElement>(".chip")) {
     updateCounter();
     form.requestSubmit();
   });
+}
+
+// A link like /?q=How+do+I+make+carbonara%3F asks the question on load.
+const linked = new URLSearchParams(window.location.search).get("q")?.trim().slice(0, 500);
+if (linked) {
+  input.value = linked;
+  updateCounter();
+  void submitQuestion(linked);
 }
