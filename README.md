@@ -47,7 +47,7 @@ answers `503 upstream_unavailable` until 07:00 UTC.
   production run: 15/15 golden, 4/4 contract.
 - **Decisions on record.** Three [ADRs](docs/adr) with alternatives, real cost and latency
   numbers, and the conditions that would invalidate each decision.
-- **Shipped like production.** 188 offline tests, `mypy --strict`, pinned Docker image,
+- **Shipped like production.** 191 offline tests, `mypy --strict`, pinned Docker image,
   CI with secret scanning and container smoke tests, deploys of tested commits only.
 
 | Read | For |
@@ -135,7 +135,7 @@ overlapping dishes (2 carbonaras, 3 marinara sauces, 2 guacamoles, 2 rice puddin
   not the filter code). Deliberate: the eval verifies the promise the service makes; a word
   missing from the lexicon is caught by neither, which is why the lists are conservative.
 - `evals/retrieval_eval.py` — retrieval-only ablation (BM25 / embeddings / hybrid).
-- `backend/tests` — 188 tests without network: wikitext parsing, time parsing, ingestion
+- `backend/tests` — 191 tests without network: wikitext parsing, time parsing, ingestion
   (mocked MediaWiki), constraints, lexicon, filters, BM25/RRF/hybrid and its degradation,
   prompt building, model fallback, API contract and invariants, rate limit, budget, cache,
   ops endpoints.
@@ -261,7 +261,7 @@ log size), sampled and stored with a short retention.
 
 ## Production readiness
 
-Done: spec-first contract with machine-checked invariants; eval harness; 188 offline
+Done: spec-first contract with machine-checked invariants; eval harness; 191 offline
 tests; strict typing and linting; pinned, non-root, read-only-compatible Docker image;
 CI with secret scanning and container smoke tests; deploy of tested commits only,
 idempotent and serialized; secrets only in the environment; structured logs with request
