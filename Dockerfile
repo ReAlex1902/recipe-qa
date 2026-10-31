@@ -9,7 +9,7 @@ RUN npm ci --no-audit --no-fund
 COPY frontend/ ./
 RUN npm run build
 
-FROM python:3.12-slim-bookworm@sha256:34386ef0cb081344d7ec1c103ba398e6e9f64e9ab3a1509accc92a4e24a07258 AS deps
+FROM python:3.15-slim-bookworm@sha256:4e03260adeeebafccd084f3584e6b84823aba5651cfb53ef8a078ed441ddf9cd AS deps
 COPY --from=ghcr.io/astral-sh/uv:0.11.3@sha256:90bbb3c16635e9627f49eec6539f956d70746c409209041800a0280b93152823 /uv /usr/local/bin/uv
 ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy UV_PYTHON_DOWNLOADS=never
 WORKDIR /app/backend
@@ -18,7 +18,7 @@ RUN uv sync --frozen --no-dev --no-install-project
 COPY backend/src ./src
 RUN uv sync --frozen --no-dev
 
-FROM python:3.12-slim-bookworm@sha256:34386ef0cb081344d7ec1c103ba398e6e9f64e9ab3a1509accc92a4e24a07258
+FROM python:3.15-slim-bookworm@sha256:4e03260adeeebafccd084f3584e6b84823aba5651cfb53ef8a078ed441ddf9cd
 ARG GIT_SHA=dev
 # Unprivileged runtime user.
 RUN useradd --create-home --uid 1000 app
